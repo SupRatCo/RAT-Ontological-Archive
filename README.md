@@ -49,7 +49,7 @@ This prevents GitHub Pages from accidentally calling `https://supratco.github.io
 From the project folder:
 
 ```bash
-cd ROApp/server
+cd server
 npm install
 npm start
 ```
@@ -99,7 +99,7 @@ CORS_ORIGINS=https://supratco.github.io,https://tu-dominio.com
 The SQLite database is created at:
 
 ```txt
-ROApp/server/data/database.sqlite
+server/data/database.sqlite
 ```
 
 Main tables include users, projects, project_members, sections, files, file_fields, tags, media, notifications, access_requests, forum_posts, forum_comments and forum_votes.
