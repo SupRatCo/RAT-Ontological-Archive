@@ -10,6 +10,12 @@
     return app && app.data ? app.data.users.find((user) => user.id === app.data.currentUserId) || null : null;
   }
 
+  function serverSettings(settings) {
+    const clean = Object.assign({}, settings || {});
+    if (clean.banner && window.ROA.Api && window.ROA.Api.assetUrl) clean.banner = window.ROA.Api.assetUrl(clean.banner);
+    return clean;
+  }
+
   function showLogin() {
     const root = document.querySelector("#loginRoot");
     const shell = document.querySelector("#appShell");
@@ -65,7 +71,7 @@
     if (window.ROA.Api && window.ROA.Api.serverMode) {
       try {
         const data = await window.ROA.Api.register(cleanName, password);
-        const user = Storage.normalizeUser({ id: data.user.id, username: data.user.username, avatar: window.ROA.Api.assetUrl(data.user.avatar_url || data.user.avatar), createdAt: data.user.createdAt, settings: data.user.settings });
+        const user = Storage.normalizeUser({ id: data.user.id, username: data.user.username, avatar: window.ROA.Api.assetUrl(data.user.avatar_url || data.user.avatar), createdAt: data.user.createdAt, settings: serverSettings(data.user.settings) });
         app.data.users = app.data.users.filter((item) => item.id !== user.id).concat(user);
         app.data.currentUserId = user.id;
         app.data.settings = Object.assign(Storage.defaultSettings(), user.settings || {});
@@ -111,7 +117,7 @@
     if (window.ROA.Api && window.ROA.Api.serverMode) {
       try {
         const data = await window.ROA.Api.login(username, password);
-        const user = Storage.normalizeUser({ id: data.user.id, username: data.user.username, avatar: window.ROA.Api.assetUrl(data.user.avatar_url || data.user.avatar), createdAt: data.user.createdAt, settings: data.user.settings });
+        const user = Storage.normalizeUser({ id: data.user.id, username: data.user.username, avatar: window.ROA.Api.assetUrl(data.user.avatar_url || data.user.avatar), createdAt: data.user.createdAt, settings: serverSettings(data.user.settings) });
         app.data.users = app.data.users.filter((item) => item.id !== user.id).concat(user);
         app.data.currentUserId = user.id;
         app.data.settings = Object.assign(Storage.defaultSettings(), user.settings || {});
@@ -208,5 +214,5 @@
   }
 
   window.ROA = window.ROA || {};
-  window.ROA.Auth = { showLogin, hideLogin, register, login, logout, currentUser, hashPassword, syncProjectsFromServer };
+  window.ROA.Auth = { showLogin, hideLogin, register, login, logout, currentUser, hashPassword, syncProjectsFromServer, serverSettings };
 })();

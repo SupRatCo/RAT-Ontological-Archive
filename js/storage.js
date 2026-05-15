@@ -1,6 +1,14 @@
 (function () {
   const KEY = "rat_ontological_archive_data_v1";
   const VERSION = 2;
+  const HEAVY_CACHE_BYTES = 1024 * 1024;
+  const cacheStatus = {
+    lastSaveFailed: false,
+    quotaExceeded: false,
+    oldCacheDetected: false,
+    lastError: "",
+    lastStoredBytes: 0
+  };
 
   function now() {
     return new Date().toISOString();
@@ -45,6 +53,108 @@
       projects: [],
       activeProjectId: null
     };
+  }
+
+  function hasServerConfigured() {
+    const config = window.ROA_CONFIG || {};
+    return Boolean(config.API_URL || config.PRODUCTION_API_URL || config.LOCAL_API_URL);
+  }
+
+  function byteSize(value) {
+    return new Blob([String(value || "")]).size;
+  }
+
+  function isDataUrl(value) {
+    return /^data:/i.test(String(value || ""));
+  }
+
+  function stripHeavySettings(settings) {
+    const clean = Object.assign(defaultSettings(), settings || {});
+    if (isDataUrl(clean.customBackground)) clean.customBackground = "";
+    if (isDataUrl(clean.banner)) clean.banner = "";
+    return clean;
+  }
+
+  function stripHeavyUser(user) {
+    return {
+      id: user.id,
+      username: user.username,
+      avatar: isDataUrl(user.avatar) ? "" : (user.avatar || ""),
+      createdAt: user.createdAt,
+      projectIds: user.projectIds || [],
+      notifications: (user.notifications || []).slice(0, 20),
+      settings: stripHeavySettings(user.settings)
+    };
+  }
+
+  function stripProjectForServer(project) {
+    return {
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      ownerId: project.ownerId,
+      visibility: project.visibility,
+      editors: project.editors || [],
+      readers: project.readers || [],
+      accessRequests: project.accessRequests || [],
+      dashboardModules: project.dashboardModules || coreDashboardModules(),
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      color: project.color || "",
+      theme: project.theme || "",
+      sections: [],
+      files: [],
+      tags: [],
+      gallery: [],
+      timeline: [],
+      trash: []
+    };
+  }
+
+  function dataForStorage(clean) {
+    if (!hasServerConfigured()) return clean;
+    return {
+      version: clean.version,
+      users: (clean.users || []).map(stripHeavyUser),
+      currentUserId: clean.currentUserId,
+      settings: stripHeavySettings(clean.settings),
+      projects: (clean.projects || []).map(stripProjectForServer),
+      activeProjectId: clean.activeProjectId
+    };
+  }
+
+  function safeSetLocalStorage(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      cacheStatus.lastSaveFailed = false;
+      cacheStatus.quotaExceeded = false;
+      cacheStatus.lastError = "";
+      cacheStatus.lastStoredBytes = byteSize(value);
+      if (cacheStatus.lastStoredBytes <= HEAVY_CACHE_BYTES) cacheStatus.oldCacheDetected = false;
+      return true;
+    } catch (error) {
+      const quota = error && (error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED" || error.code === 22 || error.code === 1014);
+      cacheStatus.lastSaveFailed = true;
+      cacheStatus.quotaExceeded = !!quota;
+      cacheStatus.lastError = error && error.message ? error.message : "localStorage save failed";
+      console.warn("R.O.A. localStorage save failed", { key, quota, error });
+      if (quota) {
+        try {
+          localStorage.removeItem(key);
+          localStorage.setItem(key, value);
+          cacheStatus.lastSaveFailed = false;
+          cacheStatus.quotaExceeded = false;
+          cacheStatus.lastError = "";
+          cacheStatus.lastStoredBytes = byteSize(value);
+          if (cacheStatus.lastStoredBytes <= HEAVY_CACHE_BYTES) cacheStatus.oldCacheDetected = false;
+          return true;
+        } catch (retryError) {
+          cacheStatus.lastError = retryError && retryError.message ? retryError.message : cacheStatus.lastError;
+          console.warn("R.O.A. localStorage retry failed", { key, retryError });
+        }
+      }
+      return false;
+    }
   }
 
   function coreDashboardModules() {
@@ -252,6 +362,8 @@
     try {
       const raw = localStorage.getItem(KEY);
       if (!raw) return defaultData();
+      cacheStatus.oldCacheDetected = hasServerConfigured() && byteSize(raw) > HEAVY_CACHE_BYTES;
+      cacheStatus.lastStoredBytes = byteSize(raw);
       return normalizeData(JSON.parse(raw));
     } catch (error) {
       console.error("Could not load R.O.A. data", error);
@@ -264,13 +376,50 @@
     clean.settings.lastSavedAt = now();
     const user = clean.users.find((item) => item.id === clean.currentUserId);
     if (user) user.settings.lastSavedAt = clean.settings.lastSavedAt;
-    localStorage.setItem(KEY, JSON.stringify(clean));
+    safeSetLocalStorage(KEY, JSON.stringify(dataForStorage(clean)));
     return clean;
   }
 
   function resetAppData() {
     localStorage.removeItem(KEY);
     return defaultData();
+  }
+
+  function localStorageUsage() {
+    let bytes = 0;
+    const entries = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      const value = localStorage.getItem(key) || "";
+      const size = byteSize(key) + byteSize(value);
+      bytes += size;
+      entries.push({ key, bytes: size });
+    }
+    entries.sort((a, b) => b.bytes - a.bytes);
+    return {
+      bytes,
+      mb: bytes / (1024 * 1024),
+      entries,
+      cacheStatus: Object.assign({}, cacheStatus),
+      oldCacheDetected: cacheStatus.oldCacheDetected,
+      serverMode: hasServerConfigured()
+    };
+  }
+
+  function clearLocalCache(data) {
+    const token = localStorage.getItem("roa_server_token");
+    const keep = new Set(["roa_server_token"]);
+    const keys = [];
+    for (let index = 0; index < localStorage.length; index += 1) keys.push(localStorage.key(index));
+    keys.forEach((key) => {
+      if (!keep.has(key)) localStorage.removeItem(key);
+    });
+    if (token) localStorage.setItem("roa_server_token", token);
+    cacheStatus.oldCacheDetected = false;
+    cacheStatus.lastSaveFailed = false;
+    cacheStatus.quotaExceeded = false;
+    if (data) saveAppData(data);
+    return localStorageUsage();
   }
 
   function exportAllData(data) {
@@ -332,6 +481,10 @@
     normalizeFile,
     normalizeMedia,
     normalizeUser,
+    hasServerConfigured,
+    safeSetLocalStorage,
+    localStorageUsage,
+    clearLocalCache,
     loadAppData,
     saveAppData,
     resetAppData,

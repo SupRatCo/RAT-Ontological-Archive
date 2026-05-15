@@ -101,7 +101,22 @@
         <label class="switch-row"><strong>Silenciar sonidos UI</strong><input id="settingMuteSounds" type="checkbox" ${settings.muteSounds ? "checked" : ""}></label>
       </div>`;
     if (tab === "language") return `<div class="panel flat"><h3>Idioma</h3><label class="field">Idioma<select id="settingLanguage">${Object.entries(languageLabels).map(([key, label]) => `<option value="${key}" ${settings.language === key ? "selected" : ""}>${label}</option>`).join("")}</select></label></div>`;
-    if (tab === "data") return `<div class="panel flat"><h3>Datos</h3><p class="meta">Ultimo guardado: ${UI.formatDate(settings.lastSavedAt)}</p><button class="action" data-action="export-all" type="button">Exportar</button><button class="ghost-action" data-action="trigger-backup-import" type="button">Importar</button><button class="danger-action" data-action="reset-all-data" type="button">Borrar todo</button></div>`;
+    if (tab === "data") {
+      const usage = Storage.localStorageUsage ? Storage.localStorageUsage() : { mb: 0, oldCacheDetected: false, cacheStatus: {} };
+      const quotaWarning = usage.cacheStatus && usage.cacheStatus.quotaExceeded;
+      return `<div class="panel flat"><h3>Datos</h3>
+        <p class="meta">Ultimo guardado: ${UI.formatDate(settings.lastSavedAt)}</p>
+        <p class="meta">Uso local aproximado: ${usage.mb.toFixed(2)} MB</p>
+        <p class="meta">Caché antigua detectada: ${usage.oldCacheDetected ? "si" : "no"}</p>
+        ${quotaWarning ? `<p class="server-alert">La caché local superó la cuota. En modo servidor se guardarán solo preferencias livianas.</p>` : ""}
+        <div class="inline-actions">
+          <button class="action" data-action="export-all" type="button">Exportar</button>
+          <button class="ghost-action" data-action="trigger-backup-import" type="button">Importar</button>
+          <button class="ghost-action" data-action="clear-local-cache" type="button">Limpiar caché local</button>
+          <button class="danger-action" data-action="reset-all-data" type="button">Borrar todo</button>
+        </div>
+      </div>`;
+    }
     if (tab === "projects") return `<div class="panel flat"><h3>Proyectos</h3><div class="item-list">${projects.map((project) => `<article class="list-row"><strong>${UI.escape(project.name)}</strong><span class="meta">${UI.escape(project.visibility || "private")}</span><div class="inline-actions"><button class="action" data-action="select-project" data-project-id="${project.id}">Abrir</button><button class="ghost-action" data-action="toggle-project-visibility" data-project-id="${project.id}">Visibilidad</button><button class="danger-action" data-action="delete-project-by-id" data-project-id="${project.id}">Eliminar</button></div></article>`).join("") || "<p class='meta'>Sin proyectos.</p>"}</div></div>`;
     if (tab === "accessibility") return `<div class="panel flat"><h3>Accesibilidad</h3><label class="field">Tamaño UI <span id="uiFontScaleValue">${settings.uiFontScale || 100}</span>%<input id="settingUiFontScale" type="range" min="85" max="125" value="${settings.uiFontScale || 100}"></label><label class="switch-row"><strong>Reducir movimiento</strong><input id="settingAnimations" type="checkbox" ${settings.animations === false ? "checked" : ""}></label></div>`;
     if (tab === "server") return `<div class="panel flat"><h3>Servidor</h3><p class="meta">API: ${UI.escape(window.ROA.Api.baseUrl || "Sin configurar")}</p><p class="meta">Health: ${UI.escape(window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : "Sin configurar")}</p><div class="inline-actions"><button class="action" type="button" data-action="test-server">Probar conexion</button><button class="ghost-action" type="button" data-action="clear-server-errors">Limpiar historial de errores</button></div><div id="serverStatus" class="server-diagnostics meta">${renderServerDiagnostics()}</div></div>`;
@@ -204,6 +219,14 @@
     window.ROA.Auth.showLogin();
   }
 
+  async function clearLocalCache() {
+    const ok = await UI.confirm("Limpiar cache local", "Se borraran caches y datos locales pesados. Tu token de sesion y preferencias basicas se conservaran cuando sea posible.", "Limpiar", true);
+    if (!ok) return;
+    if (Storage.clearLocalCache) Storage.clearLocalCache(window.ROA.App.data);
+    UI.toast("Cache local limpiada.");
+    openSettings("data");
+  }
+
   function importBackupFile(file) {
     const reader = new FileReader();
     reader.onload = () => {
@@ -224,6 +247,6 @@
     if (volume && !muted) window.ROA.lastSoundRequest = { name, volume, at: Date.now() };
   }
 
-  window.ROA.Settings = { applySettings, openSettings, exportAll, resetAllData, importBackupFile, playSound, themeLabels, testServer, clearServerErrors };
+  window.ROA.Settings = { applySettings, openSettings, exportAll, resetAllData, importBackupFile, playSound, themeLabels, testServer, clearServerErrors, clearLocalCache };
   window.playSound = playSound;
 })();

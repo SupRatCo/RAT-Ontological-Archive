@@ -9,12 +9,12 @@ function sign(user) {
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (!token) return res.status(401).json({ error: "Missing token" });
+  if (!token) return res.status(401).json({ error: "Falta token de autenticacion." });
   try {
     req.user = jwt.verify(token, secret);
     next();
   } catch (error) {
-    res.status(401).json({ error: "Invalid token" });
+    res.status(401).json({ error: "Sesion invalida o expirada." });
   }
 }
 

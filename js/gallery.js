@@ -66,6 +66,11 @@
     if (!window.ROA.Permissions.canEdit(project)) return UI.toast("No tienes permiso para subir multimedia.");
     project.gallery = project.gallery || [];
     if (window.ROA.Api && window.ROA.Api.serverMode) {
+      if (!window.ROA.Api.token || !window.ROA.Api.token()) {
+        UI.toast("Tu sesion expiro. Inicia sesion otra vez para subir multimedia.");
+        window.ROA.Auth.showLogin();
+        return;
+      }
       const health = await window.ROA.Api.health().catch(() => ({}));
       if (health.mode === "fallback-json") {
         return handleLocalUpload(files);
@@ -89,6 +94,7 @@
           }));
         } catch (error) {
           console.error("No se pudo subir multimedia al servidor", { projectId: project.id, fileName: file.name, size: file.size, type: file.type, error });
+          if (/sesion|token/i.test(error.message || "")) window.ROA.Auth.showLogin();
           rejected.push(error.message || `No se pudo subir ${file.name}.`);
         }
       }

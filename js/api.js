@@ -86,7 +86,10 @@
     if (!response.ok) {
       console.error("ROA API request failed", { url, method, origin: location.origin, status: response.status, data });
       recordError(path, { type: "http", status: response.status, url, message: data.error || response.statusText || "Error de API." });
-      if (response.status === 401) throw new Error("La sesion expiro o falta iniciar sesion.");
+      if (response.status === 401) {
+        setToken("");
+        throw new Error(data.error || "Tu sesion expiro. Inicia sesion otra vez para continuar.");
+      }
       if (response.status === 403) throw new Error("No tienes permisos para hacer esto.");
       if (response.status === 404) throw new Error("Ruta o registro no encontrado en el servidor.");
       if (response.status >= 500) throw new Error("Error del servidor al guardar o consultar datos.");
@@ -176,6 +179,11 @@
       const form = new FormData();
       form.append("avatar", file);
       return request("/users/me/avatar", { method: "POST", body: form });
+    },
+    uploadBanner: (file) => {
+      const form = new FormData();
+      form.append("banner", file);
+      return request("/users/me/banner", { method: "POST", body: form });
     },
     getPublicUser: (id) => request(`/users/${id}/public`),
     getProjects: () => request("/projects"),

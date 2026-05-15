@@ -11,6 +11,40 @@
       this.bindEvents();
       window.ROA.State.startAutosave();
       if (window.ROA.Api) await window.ROA.Api.checkConnection();
+      if (window.ROA.Api && window.ROA.Api.serverMode && this.data.currentUserId) {
+        if (!window.ROA.Api.token || !window.ROA.Api.token()) {
+          this.data.currentUserId = null;
+          this.data.activeProjectId = null;
+          this.save();
+          window.ROA.Auth.showLogin();
+          UI.toast("Inicia sesion otra vez para continuar.");
+          return;
+        }
+        try {
+          const session = await window.ROA.Api.me();
+          const user = Storage.normalizeUser({
+            id: session.user.id,
+            username: session.user.username,
+            avatar: window.ROA.Api.assetUrl(session.user.avatar || session.user.avatar_url),
+            createdAt: session.user.createdAt,
+            settings: window.ROA.Auth.serverSettings ? window.ROA.Auth.serverSettings(session.user.settings) : session.user.settings
+          });
+          this.data.users = this.data.users.filter((item) => item.id !== user.id).concat(user);
+          this.data.currentUserId = user.id;
+          this.data.settings = Object.assign(Storage.defaultSettings(), user.settings || {});
+          await window.ROA.Auth.syncProjectsFromServer();
+          this.save();
+        } catch (error) {
+          console.warn("Sesion de servidor invalida al iniciar", error);
+          if (window.ROA.Api.setToken) window.ROA.Api.setToken("");
+          this.data.currentUserId = null;
+          this.data.activeProjectId = null;
+          this.save();
+          window.ROA.Auth.showLogin();
+          UI.toast("Tu sesion expiro. Inicia sesion otra vez para continuar.");
+          return;
+        }
+      }
       if (!this.data.currentUserId) {
         window.ROA.Auth.showLogin();
       } else {
@@ -306,6 +340,9 @@
           break;
         case "clear-server-errors":
           window.ROA.Settings.clearServerErrors();
+          break;
+        case "clear-local-cache":
+          await window.ROA.Settings.clearLocalCache();
           break;
         case "export-all":
           window.ROA.Settings.exportAll();

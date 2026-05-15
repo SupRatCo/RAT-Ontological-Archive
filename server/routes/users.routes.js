@@ -61,6 +61,20 @@ router.post("/me/avatar", requireAuth, avatarUpload.single("avatar"), async (req
   }
 });
 
+router.post("/me/banner", requireAuth, avatarUpload.single("banner"), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No se recibio ningun banner." });
+    const user = await get("SELECT * FROM users WHERE id = ?", [req.user.id]);
+    const settings = JSON.parse((user && user.settings_json) || "{}");
+    settings.banner = `/uploads/avatars/${req.file.filename}`;
+    await run("UPDATE users SET settings_json = ?, updated_at = ? WHERE id = ?", [JSON.stringify(settings), now(), req.user.id]);
+    const updated = await get("SELECT * FROM users WHERE id = ?", [req.user.id]);
+    res.json({ user: publicUser(updated) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/:id/public", async (req, res, next) => {
   try {
     const user = await get("SELECT id, username, avatar_url, settings_json, created_at, updated_at FROM users WHERE id = ?", [req.params.id]);

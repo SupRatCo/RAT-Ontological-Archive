@@ -153,7 +153,7 @@
         const data = await window.ROA.Api.updateMe({ username: user.username, settings: user.settings });
         user.username = data.user.username;
         user.avatar = window.ROA.Api.assetUrl(data.user.avatar || data.user.avatar_url) || user.avatar;
-        user.settings = Object.assign(user.settings, data.user.settings || {});
+        user.settings = Object.assign(user.settings, window.ROA.Auth.serverSettings ? window.ROA.Auth.serverSettings(data.user.settings) : (data.user.settings || {}));
       } catch (error) {
         UI.toast(error.message || "No se pudo guardar el perfil.");
         return;
@@ -168,17 +168,28 @@
   function setAvatar(file) {
     const user = window.ROA.Auth.currentUser();
     if (!user || !file) return;
+    if (window.ROA.Api && window.ROA.Api.serverMode) {
+      if (!window.ROA.Api.token || !window.ROA.Api.token()) {
+        UI.toast("Tu sesion expiro. Inicia sesion otra vez para subir avatar.");
+        window.ROA.Auth.showLogin();
+        return;
+      }
+      window.ROA.Api.uploadAvatar(file).then((data) => {
+        user.avatar = window.ROA.Api.assetUrl(data.user.avatar || data.user.avatar_url) || user.avatar;
+        user.settings = Object.assign(user.settings || {}, data.user.settings || {});
+        window.ROA.App.save();
+        renderProfileButton();
+        openProfile();
+        UI.toast("Avatar actualizado.");
+      }).catch((error) => {
+        console.error("No se pudo subir el avatar", { fileName: file.name, size: file.size, type: file.type, error });
+        UI.toast(error.message || "No se pudo subir el avatar al servidor.");
+      });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = async () => {
       user.avatar = reader.result;
-      if (window.ROA.Api && window.ROA.Api.serverMode) {
-        try {
-          const data = await window.ROA.Api.uploadAvatar(file);
-          user.avatar = window.ROA.Api.assetUrl(data.user.avatar || data.user.avatar_url) || user.avatar;
-        } catch (error) {
-          UI.toast(error.message || "No se pudo subir el avatar al servidor.");
-        }
-      }
       window.ROA.App.save();
       renderProfileButton();
       openProfile();
@@ -189,14 +200,28 @@
   function setBanner(file) {
     const user = window.ROA.Auth.currentUser();
     if (!user || !file) return;
+    if (window.ROA.Api && window.ROA.Api.serverMode) {
+      if (!window.ROA.Api.token || !window.ROA.Api.token()) {
+        UI.toast("Tu sesion expiro. Inicia sesion otra vez para subir banner.");
+        window.ROA.Auth.showLogin();
+        return;
+      }
+      window.ROA.Api.uploadBanner(file).then((data) => {
+        user.settings = Object.assign(user.settings || {}, data.user.settings || {});
+        if (user.settings.banner) user.settings.banner = window.ROA.Api.assetUrl(user.settings.banner);
+        window.ROA.App.save();
+        openProfile();
+        UI.toast("Banner actualizado.");
+      }).catch((error) => {
+        console.error("No se pudo subir el banner", { fileName: file.name, size: file.size, type: file.type, error });
+        UI.toast(error.message || "No se pudo guardar el banner.");
+      });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = async () => {
       user.settings = user.settings || {};
       user.settings.banner = reader.result;
-      if (window.ROA.Api && window.ROA.Api.serverMode) {
-        try { await window.ROA.Api.updateMe({ settings: user.settings }); }
-        catch (error) { UI.toast(error.message || "No se pudo guardar el banner."); }
-      }
       window.ROA.App.save();
       openProfile();
     };

@@ -355,6 +355,14 @@ Speech-to-text uses the browser Web Speech API. If the browser does not support 
 
 Images inserted into text come from the project gallery. In server mode, media uploads are stored under `server/uploads`.
 
+## Local Cache And Upload Sessions
+
+When `API_URL` is configured, the backend is the source of truth for users, projects, files, gallery media, forum posts, comments and likes. Browser `localStorage` is used only for the auth token, small UI preferences, current user/project ids and lightweight project indexes. It should not store base64 images, videos or full project payloads in server mode.
+
+If old browser data causes quota errors, open `Configuracion > Datos` and use `Limpiar cache local`. This preserves the server token when possible and rewrites `rat_ontological_archive_data_v1` as a lightweight cache.
+
+Uploads use `Authorization: Bearer <token>` through `js/api.js`. For `FormData` uploads, do not set `Content-Type` manually; the browser must add the multipart boundary. If uploads return `401`, log in again and confirm Render has a stable `JWT_SECRET` environment variable so tokens survive backend restarts.
+
 Save behavior:
 
 - Manual save waits for the server before showing `Guardado`.
