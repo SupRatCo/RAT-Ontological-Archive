@@ -24,6 +24,8 @@ router.post("/register", async (req, res, next) => {
     const username = String(req.body.username || "").trim();
     const password = String(req.body.password || "");
     if (!username) return res.status(400).json({ error: "Username required" });
+    if (username.length < 3) return res.status(400).json({ error: "El usuario debe tener al menos 3 caracteres." });
+    if (password.length < 4) return res.status(400).json({ error: "La contraseña debe tener al menos 4 caracteres." });
     const existing = await get("SELECT id FROM users WHERE lower(username) = lower(?)", [username]);
     if (existing) return res.status(409).json({ error: "Username already exists" });
     const id = uid("user");

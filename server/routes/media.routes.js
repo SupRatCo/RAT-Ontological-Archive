@@ -39,6 +39,7 @@ router.get("/project/:projectId", requireAuth, requireProjectReader("projectId")
 
 router.post("/project/:projectId", requireAuth, requireProjectEditor("projectId"), mediaUpload.single("media"), async (req, res, next) => {
   try {
+    if (!req.file) return res.status(400).json({ error: "No se recibio ningun archivo multimedia." });
     const isVideo = /^video\//.test(req.file.mimetype);
     const folder = isVideo ? "videos" : "images";
     const oldPath = req.file.path;

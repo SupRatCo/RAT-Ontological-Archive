@@ -1,9 +1,12 @@
 const path = require("path");
+const fs = require("fs");
 const multer = require("multer");
 
 function storageFor(kind) {
+  const dir = path.join(__dirname, "..", "uploads", kind);
+  fs.mkdirSync(dir, { recursive: true });
   return multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, path.join(__dirname, "..", "uploads", kind)),
+    destination: (_req, _file, cb) => cb(null, dir),
     filename: (_req, file, cb) => {
       const safe = file.originalname.replace(/[^a-z0-9_.-]/gi, "-");
       cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}-${safe}`);

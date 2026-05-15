@@ -10,7 +10,8 @@ const now = () => new Date().toISOString();
 router.get("/project/:projectId", requireAuth, requireProjectReader("projectId"), async (req, res, next) => {
   try {
     const rows = await all("SELECT * FROM sections WHERE project_id = ? ORDER BY created_at", [req.params.projectId]);
-    res.json({ sections: rows.map((s) => ({ id: s.id, projectId: s.project_id, parentId: s.parent_id, name: s.name, description: s.description, visibility: s.visibility, createdAt: s.created_at, updatedAt: s.updated_at })) });
+    const visible = req.projectRole === "reader" ? rows.filter((row) => row.visibility !== "private") : rows;
+    res.json({ sections: visible.map((s) => ({ id: s.id, projectId: s.project_id, parentId: s.parent_id, name: s.name, description: s.description, visibility: s.visibility, createdAt: s.created_at, updatedAt: s.updated_at })) });
   } catch (error) { next(error); }
 });
 

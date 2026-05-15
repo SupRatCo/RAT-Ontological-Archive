@@ -24,13 +24,13 @@
         </div>
         <form id="loginForm" class="form-grid one">
           <label class="field">Usuario<input name="username" required autocomplete="username"></label>
-          <label class="field">Contraseña local opcional<input name="password" type="password" autocomplete="current-password"></label>
+          <label class="field">Contraseña<input name="password" type="password" autocomplete="current-password" minlength="4"></label>
           <div class="inline-actions">
             <button class="action" type="submit" data-mode="login">Entrar</button>
             <button class="ghost-action" type="submit" data-mode="register">Crear usuario</button>
           </div>
         </form>
-        <p class="meta">Sistema local simulado. Preparado para migrar a un backend en el futuro.</p>
+        <p class="meta">Servidor conectado si API_URL esta configurada. En modo local, la cuenta queda solo en este navegador.</p>
       </div>
     `;
     root.querySelector("#loginForm").addEventListener("submit", (event) => {

@@ -213,6 +213,15 @@ async function init() {
   await run("CREATE INDEX IF NOT EXISTS idx_forum_comments_parent ON forum_comments(parent_comment_id)");
   await run("CREATE INDEX IF NOT EXISTS idx_forum_votes_target ON forum_votes(target_type, target_id)");
   await run("CREATE INDEX IF NOT EXISTS idx_forum_votes_user ON forum_votes(user_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_projects_owner ON projects(owner_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_project_members_project_user ON project_members(project_id, user_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_sections_project ON sections(project_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_files_project ON files(project_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_files_section ON files(section_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_tags_project ON tags(project_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_media_project ON media(project_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at)");
+  await run("CREATE INDEX IF NOT EXISTS idx_access_requests_project_user ON access_requests(project_id, user_id)");
 }
 
 async function ensureColumn(table, column, definition) {

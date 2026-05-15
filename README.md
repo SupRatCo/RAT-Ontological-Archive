@@ -97,6 +97,12 @@ The app also respects the browser/system `prefers-reduced-motion` setting.
 - JSON Web Tokens for sessions
 - CORS
 
+Current audited dependency baseline:
+
+- `bcrypt` `^6.0.0`
+- `sqlite3` `^6.0.1`
+- `npm audit --omit=dev`: 0 known vulnerabilities at the time of the local audit.
+
 The backend allows requests from:
 
 ```txt
@@ -120,6 +126,16 @@ server/data/database.sqlite
 Main tables include users, projects, project_members, sections, files, file_fields, tags, media, notifications, access_requests, forum_posts, forum_comments and forum_votes.
 
 Forum tables use indexes on post creation date, visibility, author, comments and votes. Likes are stored server-side with one vote per user/target, so counters persist after reload and are shared across accounts.
+
+Important production note: SQLite is fine for local use, prototypes and small deployments with a persistent disk. For serious multi-user production, use PostgreSQL/Supabase/Neon/Railway Postgres. A PostgreSQL adapter is not currently implemented.
+
+Uploads are stored under:
+
+```txt
+server/uploads/
+```
+
+On hosting with ephemeral storage, uploaded avatars/images/videos can disappear after a deploy or restart. Use a persistent volume or move media to Supabase Storage, Cloudinary, S3/R2 or a similar service.
 
 ## Frontend Structure
 
@@ -172,6 +188,16 @@ The panel shows:
 
 If the backend is off or `API_URL` is wrong, the app should show a clear message instead of only `Failed to Fetch`.
 
+## Audit Report
+
+A full audit log is available in:
+
+```txt
+AUDIT_REPORT.md
+```
+
+It lists verified flows, corrected bugs, remaining production limitations and hosting requirements.
+
 ## Test Multi-User Forum
 
 To verify that the forum is shared through the backend:
@@ -184,6 +210,8 @@ To verify that the forum is shared through the backend:
 6. Log back in as User A. The comment and like count should still be visible.
 
 The feed uses `/api/forum/posts` with pagination and the `Cargar mas` button. Comments and likes are stored on the server, not as global forum data in localStorage.
+
+Private posts, private files and private sections are now checked by the backend, not only hidden in the UI.
 
 ## Text Editor Notes
 

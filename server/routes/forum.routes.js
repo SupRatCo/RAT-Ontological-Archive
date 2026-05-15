@@ -1,6 +1,7 @@
 const express = require("express");
 const { run, all, get } = require("../database");
 const { requireAuth, optionalAuth } = require("../middleware/auth.middleware");
+const { projectRole } = require("../middleware/permissions.middleware");
 const { notify } = require("./notifications.routes");
 
 const router = express.Router();
@@ -76,6 +77,17 @@ function postFromJoinedRow(row) {
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
+}
+
+async function canViewPost(row, userId) {
+  if (!row) return false;
+  if (row.visibility === "public") return true;
+  if (userId && row.user_id === userId) return true;
+  if (userId && row.project_id) {
+    const { role } = await projectRole(row.project_id, userId);
+    return !!role;
+  }
+  return false;
 }
 
 router.get("/posts", optionalAuth, async (req, res, next) => {
@@ -188,6 +200,7 @@ router.get("/posts/:postId", optionalAuth, async (req, res, next) => {
   try {
     const row = await get("SELECT * FROM forum_posts WHERE id = ?", [req.params.postId]);
     if (!row) return res.status(404).json({ error: "Post not found" });
+    if (!(await canViewPost(row, req.user && req.user.id))) return res.status(403).json({ error: "Post is private" });
     const comments = await all("SELECT c.*, u.username, u.avatar_url, u.settings_json FROM forum_comments c JOIN users u ON u.id = c.user_id WHERE c.post_id = ? ORDER BY c.created_at", [req.params.postId]);
     res.json({ post: await postOut(row, req.user && req.user.id), comments });
   } catch (error) { next(error); }
@@ -195,8 +208,9 @@ router.get("/posts/:postId", optionalAuth, async (req, res, next) => {
 
 router.get("/posts/:postId/comments", optionalAuth, async (req, res, next) => {
   try {
-    const post = await get("SELECT id FROM forum_posts WHERE id = ?", [req.params.postId]);
+    const post = await get("SELECT * FROM forum_posts WHERE id = ?", [req.params.postId]);
     if (!post) return res.status(404).json({ error: "Post not found" });
+    if (!(await canViewPost(post, req.user && req.user.id))) return res.status(403).json({ error: "Post is private" });
     const { limit, offset } = parseLimitOffset(req.query);
     const comments = await all(`
       SELECT c.*, u.username, u.avatar_url, u.settings_json
@@ -215,6 +229,7 @@ router.post("/posts/:postId/comments", requireAuth, async (req, res, next) => {
   try {
     const post = await get("SELECT * FROM forum_posts WHERE id = ?", [req.params.postId]);
     if (!post) return res.status(404).json({ error: "Post not found" });
+    if (!(await canViewPost(post, req.user.id))) return res.status(403).json({ error: "Post is private" });
     const content = String(req.body.content || "").trim();
     if (!content) return res.status(400).json({ error: "El comentario no puede estar vacio." });
     if (req.body.parentCommentId) {
@@ -234,6 +249,15 @@ async function applyVote(req, res, next, forced) {
     const voteType = req.body.voteType === "down" ? "down" : "up";
     const targetId = String(req.body.targetId || req.params.postId || "");
     if (!targetId) return res.status(400).json({ error: "Falta el objetivo del voto." });
+    if (targetType === "post") {
+      const targetPost = await get("SELECT * FROM forum_posts WHERE id = ?", [targetId]);
+      if (!targetPost) return res.status(404).json({ error: "Post not found" });
+      if (!(await canViewPost(targetPost, req.user.id))) return res.status(403).json({ error: "Post is private" });
+    } else {
+      const targetComment = await get("SELECT c.*, p.user_id as post_user_id, p.visibility as post_visibility, p.project_id as post_project_id FROM forum_comments c JOIN forum_posts p ON p.id = c.post_id WHERE c.id = ?", [targetId]);
+      if (!targetComment) return res.status(404).json({ error: "Comment not found" });
+      if (!(await canViewPost({ user_id: targetComment.post_user_id, visibility: targetComment.post_visibility, project_id: targetComment.post_project_id }, req.user.id))) return res.status(403).json({ error: "Post is private" });
+    }
     const existing = await get("SELECT * FROM forum_votes WHERE user_id = ? AND target_type = ? AND target_id = ?", [req.user.id, targetType, targetId]);
     let liked = false;
     if (forced === "delete") {
@@ -274,6 +298,8 @@ router.delete("/posts/:postId/like", requireAuth, (req, res, next) => {
 router.post("/posts/:postId/save", requireAuth, async (req, res, next) => {
   try {
     const post = await get("SELECT * FROM forum_posts WHERE id = ?", [req.params.postId]);
+    if (!post) return res.status(404).json({ error: "Post not found" });
+    if (!(await canViewPost(post, req.user.id))) return res.status(403).json({ error: "Post is private" });
     const saved = new Set(JSON.parse(post.saved_by_json || "[]"));
     if (saved.has(req.user.id)) saved.delete(req.user.id);
     else saved.add(req.user.id);

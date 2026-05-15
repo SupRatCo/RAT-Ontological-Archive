@@ -38,11 +38,21 @@ if (hasPackage("express") && hasPackage("sqlite3")) {
       if (isAllowedOrigin(origin)) callback(null, true);
       else callback(new Error(`CORS origin not allowed: ${origin}`));
     },
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
   }));
   app.use(express.json({ limit: "8mb" }));
   app.use(express.urlencoded({ extended: true }));
+  app.use((_req, res, next) => {
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode >= 400 && body && typeof body === "object" && body.error && body.ok === undefined) {
+        return originalJson(Object.assign({ ok: false }, body));
+      }
+      return originalJson(body);
+    };
+    next();
+  });
   app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
   app.use("/api/auth", require("./routes/auth.routes"));
@@ -61,7 +71,12 @@ if (hasPackage("express") && hasPackage("sqlite3")) {
   app.get("*", (_req, res) => res.sendFile(path.join(clientRoot, "index.html")));
   app.use((error, _req, res, _next) => {
     console.error(error);
-    res.status(500).json({ error: error.message || "Server error" });
+    const status = error.status || error.statusCode || (error.code === "LIMIT_FILE_SIZE" ? 413 : 500);
+    res.status(status).json({
+      ok: false,
+      error: status === 413 ? "El archivo es demasiado grande." : (error.message || "Server error"),
+      details: process.env.NODE_ENV === "production" ? undefined : error.code || error.stack
+    });
   });
 
   init().then(() => {
@@ -112,14 +127,17 @@ function startFallbackServer() {
   }
 
   function send(res, status, data) {
+    const payload = status >= 400 && data && typeof data === "object" && data.error && data.ok === undefined
+      ? Object.assign({ ok: false }, data)
+      : data;
     res.writeHead(status, {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": res.allowedOrigin || "*",
-      "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
+      "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
       "Vary": "Origin"
     });
-    res.end(JSON.stringify(data));
+    res.end(JSON.stringify(payload));
   }
 
   function parseBody(req) {
@@ -408,7 +426,7 @@ function startFallbackServer() {
     if (req.method === "OPTIONS") {
       res.writeHead(isAllowedOrigin(origin) ? 204 : 403, {
         "Access-Control-Allow-Origin": res.allowedOrigin,
-        "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Vary": "Origin"
       });

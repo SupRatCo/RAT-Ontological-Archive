@@ -1,7 +1,7 @@
 const express = require("express");
 const { run, all, get } = require("../database");
 const { requireAuth } = require("../middleware/auth.middleware");
-const { requireProjectReader, requireProjectEditor } = require("../middleware/permissions.middleware");
+const { projectRole, requireProjectReader, requireProjectEditor } = require("../middleware/permissions.middleware");
 
 const router = express.Router();
 const uid = (prefix) => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
@@ -49,7 +49,8 @@ function fileOut(row, fields = []) {
 router.get("/project/:projectId", requireAuth, requireProjectReader("projectId"), async (req, res, next) => {
   try {
     const rows = await all("SELECT * FROM files WHERE project_id = ? ORDER BY updated_at DESC", [req.params.projectId]);
-    res.json({ files: rows.map((row) => fileOut(row)) });
+    const visible = req.projectRole === "reader" ? rows.filter((row) => row.visibility !== "private") : rows;
+    res.json({ files: visible.map((row) => fileOut(row)) });
   } catch (error) { next(error); }
 });
 
@@ -68,6 +69,9 @@ router.get("/:fileId", requireAuth, async (req, res, next) => {
   try {
     const row = await get("SELECT * FROM files WHERE id = ?", [req.params.fileId]);
     if (!row) return res.status(404).json({ error: "File not found" });
+    const { role } = await projectRole(row.project_id, req.user.id);
+    if (!role) return res.status(403).json({ error: "No access" });
+    if (row.visibility === "private" && role === "reader") return res.status(403).json({ error: "File is private" });
     const fields = await all("SELECT * FROM file_fields WHERE file_id = ? ORDER BY sort_order", [req.params.fileId]);
     res.json({ file: fileOut(row, fields) });
   } catch (error) { next(error); }

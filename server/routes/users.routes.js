@@ -51,6 +51,7 @@ router.patch("/me", requireAuth, async (req, res, next) => {
 
 router.post("/me/avatar", requireAuth, avatarUpload.single("avatar"), async (req, res, next) => {
   try {
+    if (!req.file) return res.status(400).json({ error: "No se recibio ningun avatar." });
     const avatarUrl = `/uploads/avatars/${req.file.filename}`;
     await run("UPDATE users SET avatar_url = ?, updated_at = ? WHERE id = ?", [avatarUrl, now(), req.user.id]);
     const user = await get("SELECT * FROM users WHERE id = ?", [req.user.id]);
