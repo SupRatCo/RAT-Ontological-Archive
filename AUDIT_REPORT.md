@@ -206,10 +206,20 @@ Frontend:
 Editar `js/config.js`:
 
 ```js
-window.ROA_CONFIG = {
-  API_URL: "https://tu-backend.onrender.com"
-};
+(function () {
+  const isLocalHost = ["localhost", "127.0.0.1", ""].includes(window.location.hostname) || window.location.protocol === "file:";
+  const onlineBackend = "https://tu-backend.onrender.com";
+  window.ROA_CONFIG = Object.assign({
+    LOCAL_API_URL: "http://localhost:3000",
+    PRODUCTION_API_URL: onlineBackend,
+    API_URL: isLocalHost ? "http://localhost:3000" : onlineBackend
+  }, window.ROA_CONFIG || {});
+})();
 ```
+
+Nota: para `https://supratco.github.io/RAT-Ontological-Archive/`, el origin CORS correcto es `https://supratco.github.io`; no se incluye la ruta `/RAT-Ontological-Archive/`.
+
+En GitHub Pages, si `API_URL` queda vacio o el backend no responde, la app muestra una pantalla/alerta de servidor desconectado y bloquea el login local falso para evitar datos aislados por navegador.
 
 ## Recomendaciones Pendientes
 
@@ -220,6 +230,7 @@ window.ROA_CONFIG = {
 - Completar formato estricto `{ ok:true, data:{} }` en una migracion coordinada.
 - Revisar UI completa con usuarios reales despues de desplegar backend online, porque CORS y latencia real dependen del hosting.
 - Agregar tests automatizados formales en `server/tests/` para no depender solo de scripts manuales.
+- Verificar despliegue online real cuando exista una URL publica del backend. No se puede afirmar que GitHub Pages funciona contra produccion sin probar una URL real y sus variables de hosting.
 
 ## Comandos Usados Para Verificacion
 

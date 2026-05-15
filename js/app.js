@@ -5,11 +5,12 @@
     data: null,
     view: { name: "dashboard", params: {} },
 
-    init() {
+    async init() {
       this.data = Storage.loadAppData();
       this.save();
       this.bindEvents();
       window.ROA.State.startAutosave();
+      if (window.ROA.Api) await window.ROA.Api.checkConnection();
       if (!this.data.currentUserId) {
         window.ROA.Auth.showLogin();
       } else {
@@ -208,6 +209,14 @@
           break;
         case "open-forum":
           this.navigate("forum", { filter: el.dataset.filter || "recent" });
+          break;
+        case "retry-server-connection":
+          if (window.ROA.Api) {
+            await window.ROA.Api.checkConnection();
+            if (this.data.currentUserId) this.render();
+            else window.ROA.Auth.showLogin();
+            UI.toast(window.ROA.Api.connection.ok ? "Servidor conectado." : window.ROA.Api.connection.message);
+          }
           break;
         case "load-more-forum":
           window.ROA.Forum.renderFeed(this.view.params || {}, true);
@@ -583,5 +592,10 @@
   };
 
   window.ROA.App = App;
-  document.addEventListener("DOMContentLoaded", () => App.init());
+  document.addEventListener("DOMContentLoaded", () => {
+    App.init().catch((error) => {
+      console.error(error);
+      if (window.ROA && window.ROA.UI) window.ROA.UI.toast(error.message || "No se pudo iniciar la app.");
+    });
+  });
 })();

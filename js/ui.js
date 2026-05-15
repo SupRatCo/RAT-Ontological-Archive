@@ -202,12 +202,37 @@
   };
 
   UI.renderWelcome = function () {
+    if (window.ROA.Api && window.ROA.Api.connection && window.ROA.Api.connection.checked && !window.ROA.Api.connection.ok) {
+      UI.renderServerUnavailable();
+      return;
+    }
     UI.qs("#mainView").innerHTML = UI.empty(
       "Archivo listo",
       "Selecciona o crea un proyecto.",
       "Crear proyecto",
       "create-project"
     );
+  };
+
+  UI.renderServerUnavailable = function () {
+    const api = window.ROA.Api || {};
+    const config = window.ROA_CONFIG || {};
+    const message = api.connection && api.connection.message ? api.connection.message : "No se pudo conectar con el servidor.";
+    UI.qs("#mainView").innerHTML = `
+      <section class="empty-state server-unavailable">
+        <div>
+          <span class="overline">SERVIDOR DESCONECTADO</span>
+          <h1>No se pudo conectar con el backend</h1>
+          <p>${UI.escape(message)}</p>
+          <p class="meta">API actual: ${UI.escape(api.baseUrl || config.API_URL || "Sin configurar")}</p>
+          <div class="inline-actions">
+            <button class="action" type="button" data-action="retry-server-connection">Reintentar</button>
+            <button class="ghost-action" type="button" data-action="open-settings">Configurar</button>
+          </div>
+          <p class="meta">En GitHub Pages debes configurar <code>js/config.js</code> con la URL HTTPS del backend online.</p>
+        </div>
+      </section>
+    `;
   };
 
   UI.renderBreadcrumbs = function (project, sectionId) {

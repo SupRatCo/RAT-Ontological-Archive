@@ -1,11 +1,19 @@
 (function () {
   const config = window.ROA_CONFIG || {};
-  const configuredApiUrl = String(config.API_URL || "").replace(/\/+$/, "");
-  const fallbackApiUrl = location.protocol === "file:" ? "" : location.origin;
+  const configuredApiUrl = String(config.API_URL || config.PRODUCTION_API_URL || "").replace(/\/+$/, "");
+  const isHostedStatic = /(^|\.)github\.io$/i.test(location.hostname);
+  const fallbackApiUrl = location.protocol === "file:" || isHostedStatic ? "" : location.origin;
   const baseUrl = configuredApiUrl || fallbackApiUrl;
   const serverMode = Boolean(baseUrl);
   const tokenKey = "roa_server_token";
   const recentErrors = [];
+  const connection = {
+    checked: false,
+    ok: false,
+    message: serverMode ? "Sin comprobar" : "API_URL no esta configurada.",
+    latency: null,
+    mode: ""
+  };
 
   function recordError(path, detail) {
     recentErrors.unshift(Object.assign({
@@ -25,7 +33,10 @@
   }
 
   async function request(path, options) {
-    if (!serverMode) throw new Error("Server API unavailable. Configure window.ROA_CONFIG.API_URL.");
+    if (!serverMode) {
+      recordError(path, { type: "config", message: "API_URL no esta configurada." });
+      throw new Error("API_URL no esta configurada. Configura js/config.js con la URL del backend online.");
+    }
     const init = Object.assign({ headers: {} }, options || {});
     if (!(init.body instanceof FormData)) init.headers["Content-Type"] = "application/json";
     if (token()) init.headers.Authorization = `Bearer ${token()}`;
@@ -73,6 +84,33 @@
     return { ok: true };
   }
 
+  async function checkConnection() {
+    if (!serverMode) {
+      Object.assign(connection, { checked: true, ok: false, message: "API_URL no esta configurada.", latency: null, mode: "" });
+      return connection;
+    }
+    const started = performance.now();
+    try {
+      const health = await request("/health");
+      Object.assign(connection, {
+        checked: true,
+        ok: true,
+        message: "Servidor conectado.",
+        latency: Math.round(performance.now() - started),
+        mode: health.mode || "api"
+      });
+    } catch (error) {
+      Object.assign(connection, {
+        checked: true,
+        ok: false,
+        message: error.message || "No se pudo conectar con el servidor.",
+        latency: null,
+        mode: ""
+      });
+    }
+    return connection;
+  }
+
   function assetUrl(value) {
     if (!value) return "";
     if (/^(data:|https?:|blob:)/i.test(value)) return value;
@@ -81,13 +119,16 @@
 
   const api = {
     serverMode,
+    requiresServer: isHostedStatic,
     baseUrl,
     token,
     setToken,
     request,
     recentErrors,
+    connection,
     assetUrl,
     health: () => request("/health"),
+    checkConnection,
     login,
     register,
     logout,

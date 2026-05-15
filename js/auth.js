@@ -13,15 +13,25 @@
   function showLogin() {
     const root = document.querySelector("#loginRoot");
     const shell = document.querySelector("#appShell");
+    const api = window.ROA.Api || {};
+    const offline = api.connection && api.connection.checked && !api.connection.ok;
     root.classList.remove("hidden");
     shell.classList.add("hidden");
     root.innerHTML = `
       <div class="login-card">
         <div class="brand-plate login-brand"><span>RAT</span><span>Ontological</span><span>Archive</span></div>
         <div>
-          <h1>Acceso local</h1>
-          <p>Inicia sesion o crea un usuario para administrar tus proyectos narrativos en este dispositivo.</p>
+          <h1>${api.requiresServer ? "Acceso online" : "Acceso local"}</h1>
+          <p>${api.requiresServer ? "Conecta con el backend configurado para usar usuarios, documentos y foro compartido." : "Inicia sesion o crea un usuario para administrar tus proyectos narrativos en este dispositivo."}</p>
         </div>
+        ${offline ? `
+          <section class="server-alert">
+            <strong>Servidor no disponible</strong>
+            <span>${window.ROA.UI.escape(api.connection.message || "No se pudo conectar con el backend.")}</span>
+            <small>API actual: ${window.ROA.UI.escape(api.baseUrl || "Sin configurar")}</small>
+            <button class="ghost-action" type="button" data-action="retry-server-connection">Reintentar conexion</button>
+          </section>
+        ` : ""}
         <form id="loginForm" class="form-grid one">
           <label class="field">Usuario<input name="username" required autocomplete="username"></label>
           <label class="field">Contraseña<input name="password" type="password" autocomplete="current-password" minlength="4"></label>
@@ -30,7 +40,7 @@
             <button class="ghost-action" type="submit" data-mode="register">Crear usuario</button>
           </div>
         </form>
-        <p class="meta">Servidor conectado si API_URL esta configurada. En modo local, la cuenta queda solo en este navegador.</p>
+        <p class="meta">${api.requiresServer ? "En GitHub Pages se requiere un backend online configurado en js/config.js." : "Servidor conectado si API_URL esta configurada. En modo local, la cuenta queda solo en este navegador."}</p>
       </div>
     `;
     root.querySelector("#loginForm").addEventListener("submit", (event) => {
@@ -69,6 +79,11 @@
       } catch (error) {
         window.ROA.UI.toast(error.message || "No se pudo crear usuario en servidor.");
       }
+    }
+    if (window.ROA.Api && window.ROA.Api.requiresServer) {
+      window.ROA.UI.toast("Este despliegue necesita un backend online. Configura API_URL en js/config.js.");
+      showLogin();
+      return;
     }
     if (app.data.users.some((user) => user.username.toLowerCase() === cleanName.toLowerCase())) {
       window.ROA.UI.toast("Ese usuario ya existe.");
@@ -109,6 +124,11 @@
       } catch (error) {
         window.ROA.UI.toast(error.message || "No se pudo iniciar sesión en servidor.");
       }
+    }
+    if (window.ROA.Api && window.ROA.Api.requiresServer) {
+      window.ROA.UI.toast("Este despliegue necesita un backend online. Configura API_URL en js/config.js.");
+      showLogin();
+      return;
     }
     const user = app.data.users.find((item) => item.username.toLowerCase() === cleanName);
     if (!user || user.passwordHash !== hashPassword(password)) {

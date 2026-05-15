@@ -201,6 +201,28 @@ body.reduced-motion *::after {
   font-size: 12px;
 }
 
+.server-alert {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  color: var(--text-main);
+  background: rgba(160, 20, 36, 0.18);
+}
+
+.server-alert strong {
+  color: var(--danger);
+}
+
+.server-alert small {
+  color: var(--text-muted);
+}
+
+.server-unavailable code {
+  color: var(--accent-soft);
+}
+
 @keyframes starDrift {
   from { background-position: 0 0, 0 0, 0 0, 0 0, center, center, center; }
   to { background-position: 180px 120px, -260px 190px, 330px -160px, -420px -320px, center, center, center; }

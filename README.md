@@ -20,20 +20,31 @@ The frontend reads its API base URL from:
 js/config.js
 ```
 
-Default local development value:
+Current development/prod switch:
 
 ```js
-window.ROA_CONFIG = {
-  API_URL: "http://localhost:3000"
-};
+(function () {
+  const isLocalHost = ["localhost", "127.0.0.1", ""].includes(window.location.hostname) || window.location.protocol === "file:";
+  window.ROA_CONFIG = Object.assign({
+    LOCAL_API_URL: "http://localhost:3000",
+    PRODUCTION_API_URL: "",
+    API_URL: isLocalHost ? "http://localhost:3000" : ""
+  }, window.ROA_CONFIG || {});
+})();
 ```
 
-For GitHub Pages, change it before deploying:
+For GitHub Pages, edit `js/config.js` and set the online backend URL. The backend must use HTTPS because GitHub Pages is served over HTTPS:
 
 ```js
-window.ROA_CONFIG = {
-  API_URL: "https://mi-backend.onrender.com"
-};
+(function () {
+  const isLocalHost = ["localhost", "127.0.0.1", ""].includes(window.location.hostname) || window.location.protocol === "file:";
+  const onlineBackend = "https://mi-backend.onrender.com";
+  window.ROA_CONFIG = Object.assign({
+    LOCAL_API_URL: "http://localhost:3000",
+    PRODUCTION_API_URL: onlineBackend,
+    API_URL: isLocalHost ? "http://localhost:3000" : onlineBackend
+  }, window.ROA_CONFIG || {});
+})();
 ```
 
 All frontend API calls go through `js/api.js`, which calls:
@@ -43,6 +54,8 @@ ${API_URL}/api/...
 ```
 
 This prevents GitHub Pages from accidentally calling `https://supratco.github.io/api/...`.
+
+If `API_URL` is empty on GitHub Pages, the app shows a server unavailable screen/login warning and blocks fake local login/register. That is intentional: the hosted frontend needs a real backend for shared users, documents, forum posts, likes, comments and uploads.
 
 ## Run With Local Server
 
@@ -117,6 +130,12 @@ You can override allowed origins in hosting with:
 CORS_ORIGINS=https://supratco.github.io,https://tu-dominio.com
 ```
 
+Important: CORS uses origins only, not paths. For `https://supratco.github.io/RAT-Ontological-Archive/`, the allowed origin is:
+
+```txt
+https://supratco.github.io
+```
+
 The SQLite database is created at:
 
 ```txt
@@ -136,6 +155,34 @@ server/uploads/
 ```
 
 On hosting with ephemeral storage, uploaded avatars/images/videos can disappear after a deploy or restart. Use a persistent volume or move media to Supabase Storage, Cloudinary, S3/R2 or a similar service.
+
+## Online Deployment Checklist
+
+Use this checklist when deploying the real web version with GitHub Pages plus an external backend.
+
+1. Deploy the backend from `server/` to Render, Railway, Fly.io or a VPS.
+2. Set backend environment variables:
+   - `JWT_SECRET`: long random secret.
+   - `CORS_ORIGINS=https://supratco.github.io`
+   - `PORT`: usually provided by the host.
+   - `DATABASE_PATH`: optional SQLite path if using a persistent disk.
+3. Make sure the backend URL is HTTPS, for example `https://mi-backend.onrender.com`.
+4. Open `https://mi-backend.onrender.com/api/health` and confirm it returns JSON with `ok: true`.
+5. If using SQLite, attach a persistent disk and point the database to it. Without persistent storage, `server/data/database.sqlite` can be reset by redeploys/restarts depending on the host.
+6. If using uploads, attach persistent storage for `server/uploads/`. Without it, avatars, banners, images and videos can disappear after deploys/restarts.
+7. Edit `js/config.js` and set `onlineBackend`/`API_URL` to the deployed backend URL.
+8. Commit and push the frontend to GitHub Pages.
+9. Open `https://supratco.github.io/RAT-Ontological-Archive/`.
+10. In Settings > Server, press `Probar conexion`.
+11. Test real flows from GitHub Pages:
+    - register/login,
+    - create a project,
+    - create and save a document,
+    - publish a forum post,
+    - comment and like from a second user,
+    - upload an avatar/image/video.
+
+This repository cannot prove the online deployment is working until a real backend URL is provided and reachable from this environment. The local code is prepared for it, but the final online verification must be done against the deployed backend.
 
 ## Frontend Structure
 
