@@ -155,6 +155,16 @@
     saveTimer = setTimeout(() => saveFile(fileId, true), 900);
   }
 
+  function refreshCurrentViewAfterFileChange(fileId) {
+    const app = window.ROA.App;
+    if (!app || !app.view) return;
+    if (app.view.name === "file" && app.view.params && app.view.params.fileId === fileId) {
+      app.navigate("trash");
+      return;
+    }
+    app.render();
+  }
+
   function worldSchema() {
     return [
       ["base", "Datos base", [["name", "Nombre"], ["worldType", "Tipo de mundo"], ["galaxy", "Galaxia"], ["system", "Sistema"], ["dimension", "Dimension"], ["currentState", "Estado actual"], ["techLevel", "Nivel tecnologico"], ["energyLevel", "Nivel energetico"], ["dangerLevel", "Nivel de peligro"]]],
@@ -269,6 +279,11 @@
       (async () => {
       const form = event.currentTarget;
       const values = Object.fromEntries(new FormData(form).entries());
+      const submit = form.querySelector("button[type='submit']");
+      if (submit) {
+        submit.disabled = true;
+        submit.textContent = "Creando...";
+      }
       const file = {
         id: Storage.uid("file"),
         type: values.type,
@@ -288,7 +303,17 @@
         internalSections: Storage.defaultInternalSections(values.type)
       };
       if (window.ROA.Api && window.ROA.Api.serverMode) {
-        try { await window.ROA.Api.createFile(project.id, file); } catch (error) { UI.toast(error.message || "No se pudo guardar en servidor."); }
+        try {
+          await window.ROA.Api.createFile(project.id, file);
+        } catch (error) {
+          console.error("No se pudo crear el archivo en servidor", { projectId: project.id, file, error });
+          UI.toast(error.message || "No se pudo guardar en servidor.");
+          if (submit) {
+            submit.disabled = false;
+            submit.textContent = "Crear";
+          }
+          return;
+        }
       }
       project.files.push(file);
       project.updatedAt = Storage.now();
@@ -389,11 +414,20 @@
     if (!window.ROA.Permissions.canEdit(project)) return UI.toast("No tienes permiso para eliminar archivos.");
     const ok = await UI.confirm("Enviar a papelera", `Enviar "${file.title}" a papelera?`, "Enviar", true);
     if (!ok) return;
+    if (window.ROA.Api && window.ROA.Api.serverMode) {
+      try {
+        await window.ROA.Api.deleteFile(fileId);
+      } catch (error) {
+        console.error("No se pudo borrar el archivo en servidor", { fileId, error });
+        UI.toast(error.message || "No se pudo borrar el archivo en servidor.");
+        return;
+      }
+    }
     project.trash.push({ id: Storage.uid("trash"), kind: "file", title: file.title, payload: file, deletedAt: Storage.now() });
     project.files = project.files.filter((item) => item.id !== fileId);
     project.updatedAt = Storage.now();
     window.ROA.App.save();
-    window.ROA.App.navigate("dashboard");
+    refreshCurrentViewAfterFileChange(fileId);
     UI.toast("Archivo enviado a papelera.");
   }
 
@@ -657,16 +691,26 @@
     `;
   }
 
-  function restoreTrash(trashId) {
+  async function restoreTrash(trashId) {
     const project = UI.currentProject();
     const item = project.trash.find((entry) => entry.id === trashId);
     if (!item) return;
+    if (item.kind === "file" && window.ROA.Api && window.ROA.Api.serverMode) {
+      try {
+        await window.ROA.Api.createFile(project.id, item.payload);
+      } catch (error) {
+        console.error("No se pudo restaurar el archivo en servidor", { trashId, error });
+        UI.toast(error.message || "No se pudo restaurar el archivo en servidor.");
+        return;
+      }
+    }
     if (item.kind === "file") project.files.push(item.payload);
     if (item.kind === "sections") project.sections.push(...item.payload);
     if (item.kind === "image") project.gallery.push(item.payload);
     project.trash = project.trash.filter((entry) => entry.id !== trashId);
     window.ROA.App.save();
     renderTrash();
+    UI.toast("Elemento restaurado.");
   }
 
   async function deleteTrash(trashId) {
@@ -676,6 +720,7 @@
     project.trash = project.trash.filter((entry) => entry.id !== trashId);
     window.ROA.App.save();
     renderTrash();
+    UI.toast("Elemento eliminado definitivamente.");
   }
 
   function renderRelations() {

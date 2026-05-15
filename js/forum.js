@@ -7,6 +7,10 @@
   let hasMorePosts = false;
   let loadingFeed = false;
 
+  function currentFeedVisible() {
+    return window.ROA.App && window.ROA.App.view && window.ROA.App.view.name === "forum" && document.querySelector(".forum-feed");
+  }
+
   function safeHtml(html) {
     const template = document.createElement("template");
     template.innerHTML = String(html || "");
@@ -108,6 +112,43 @@
     if (node) node.innerHTML = hasMorePosts ? `<button class="ghost-action" type="button" data-action="load-more-forum">Cargar mas</button>` : "";
   }
 
+  function matchesCurrentFilters(post) {
+    const filters = lastFilters || {};
+    const q = String(filters.q || "").trim().toLowerCase();
+    const current = window.ROA.Auth.currentUser();
+    if (filters.filter === "mine" && current && post.userId !== current.id && (!post.author || post.author.id !== current.id)) return false;
+    if (filters.filter === "saved" && !post.saved) return false;
+    if (q && !`${post.title} ${post.content} ${post.summary || ""} ${(post.tags || []).join(" ")}`.toLowerCase().includes(q)) return false;
+    return true;
+  }
+
+  async function showCreatedPost(post) {
+    if (!post) return;
+    feedCache = feedCache.filter((item) => item.id !== post.id);
+    feedCache.unshift(post);
+    if (!currentFeedVisible()) {
+      window.ROA.App.navigate("forum", { filter: "recent" });
+      return;
+    }
+    if (!matchesCurrentFilters(post)) {
+      UI.toast("Publicado correctamente, pero no aparece por el filtro actual.");
+      return;
+    }
+    const feed = document.querySelector(".forum-feed");
+    const empty = feed && feed.querySelector(".empty-state");
+    if (empty) empty.remove();
+    if (feed) feed.insertAdjacentHTML("afterbegin", renderPostCard(post));
+    updateLoadMore();
+  }
+
+  function setComposerBusy(isBusy) {
+    const button = document.querySelector("[data-action='submit-forum-post']");
+    if (!button) return;
+    if (!button.dataset.idleText) button.dataset.idleText = button.textContent;
+    button.disabled = isBusy;
+    button.textContent = isBusy ? "Publicando..." : button.dataset.idleText;
+  }
+
   function debounce(fn, ms) {
     let id;
     return () => {
@@ -170,11 +211,13 @@
   async function submitPost() {
     const form = document.querySelector("#forumPostForm");
     const contentNode = document.querySelector("#forumPostContent");
+    if (!form || !contentNode) return UI.toast("No se encontro el formulario de publicacion.");
     const values = Object.fromEntries(new FormData(form).entries());
     const content = safeHtml(contentNode.innerHTML);
     if (!values.title.trim()) return UI.toast("El titulo no puede estar vacio.");
     if (!stripHtml(content).trim()) return UI.toast("El contenido no puede estar vacio.");
     const current = window.ROA.Auth.currentUser();
+    if (!current) return UI.toast("Debes iniciar sesion para publicar.");
     const post = {
       id: Storage.uid("post"),
       userId: current.id,
@@ -192,14 +235,37 @@
       createdAt: Storage.now(),
       updatedAt: Storage.now()
     };
-    if (window.ROA.Api.serverMode) await window.ROA.Api.createForumPost(post);
-    else {
-      localPosts().unshift(post);
-      window.ROA.App.save();
+    setComposerBusy(true);
+    try {
+      let createdPost = post;
+      if (window.ROA.Api.serverMode) {
+        const result = await window.ROA.Api.createForumPost(post);
+        createdPost = result.post || post;
+      } else {
+        localPosts().unshift(post);
+        window.ROA.App.save();
+      }
+      UI.closeModal();
+      UI.toast("Publicado correctamente.");
+      await showCreatedPost(createdPost);
+    } catch (error) {
+      console.error("No se pudo publicar en el foro", {
+        url: window.ROA.Api && window.ROA.Api.apiUrl ? window.ROA.Api.apiUrl("/forum/posts") : "/api/forum/posts",
+        method: "POST",
+        payload: {
+          title: post.title,
+          summary: post.summary,
+          visibility: post.visibility,
+          tags: post.tags,
+          sourceFileId: post.sourceFileId,
+          projectId: post.projectId
+        },
+        error
+      });
+      UI.toast(error.message || "No se pudo publicar. El contenido sigue abierto.");
+    } finally {
+      setComposerBusy(false);
     }
-    UI.closeModal();
-    UI.toast("Publicado.");
-    renderFeed({});
   }
 
   async function openPost(postId) {
@@ -259,14 +325,24 @@
   async function submitComment(postId, parentCommentId, textOverride) {
     const text = (textOverride || document.querySelector("#forumCommentText").value || "").trim();
     if (!text) return UI.toast("El comentario no puede estar vacio.");
-    if (window.ROA.Api.serverMode) await window.ROA.Api.createForumComment(postId, { content: text, parentCommentId });
-    else {
-      const post = localPosts().find((item) => item.id === postId);
-      post.comments = post.comments || [];
-      post.comments.push({ id: Storage.uid("comment"), postId, parentCommentId, userId: window.ROA.Auth.currentUser().id, username: window.ROA.Auth.currentUser().username, content: text, createdAt: Storage.now() });
-      window.ROA.App.save();
+    try {
+      if (window.ROA.Api.serverMode) await window.ROA.Api.createForumComment(postId, { content: text, parentCommentId });
+      else {
+        const post = localPosts().find((item) => item.id === postId);
+        post.comments = post.comments || [];
+        post.comments.push({ id: Storage.uid("comment"), postId, parentCommentId, userId: window.ROA.Auth.currentUser().id, username: window.ROA.Auth.currentUser().username, content: text, createdAt: Storage.now() });
+        window.ROA.App.save();
+      }
+      const cached = feedCache.find((post) => post.id === postId);
+      if (cached) cached.commentsCount = (cached.commentsCount || 0) + 1;
+      document.querySelectorAll(`[data-action="open-forum-post"][data-post-id="${CSS.escape(postId)}"]`).forEach((button) => {
+        if (/comentarios/.test(button.textContent)) button.textContent = `${cached ? cached.commentsCount || 0 : ""} comentarios`;
+      });
+      await openPost(postId);
+    } catch (error) {
+      console.error("No se pudo comentar en el foro", { postId, parentCommentId, error });
+      UI.toast(error.message || "No se pudo publicar el comentario.");
     }
-    openPost(postId);
   }
 
   async function submitReply(postId, parentCommentId) {

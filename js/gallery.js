@@ -1,6 +1,15 @@
 (function () {
   const { UI, Storage } = window.ROA;
 
+  function refreshGalleryView() {
+    const app = window.ROA.App;
+    if (app && app.view && app.view.name === "gallery") {
+      renderGallery(app.view.params.filterTag, app.view.params.filterType);
+      return;
+    }
+    if (app) app.render();
+  }
+
   function renderGallery(filterTag, filterType) {
     const project = UI.currentProject();
     if (!project) return UI.renderWelcome();
@@ -55,6 +64,7 @@
     const project = UI.currentProject();
     if (!project || !files || !files.length) return;
     if (!window.ROA.Permissions.canEdit(project)) return UI.toast("No tienes permiso para subir multimedia.");
+    project.gallery = project.gallery || [];
     if (window.ROA.Api && window.ROA.Api.serverMode) {
       const health = await window.ROA.Api.health().catch(() => ({}));
       if (health.mode === "fallback-json") {
@@ -62,6 +72,7 @@
       }
       const uploaded = [];
       const rejected = [];
+      UI.toast("Subiendo multimedia...");
       for (const file of Array.from(files)) {
         try {
           const result = await window.ROA.Api.uploadMedia(project.id, file, { title: file.name.replace(/\.[^.]+$/, "") });
@@ -77,19 +88,14 @@
             uploadedAt: result.media.createdAt
           }));
         } catch (error) {
-          try {
-            const localMedia = await window.ROA.MediaStorage.readFile(file);
-            if (localMedia.error) rejected.push(localMedia.error);
-            else uploaded.push(localMedia);
-          } catch (_readError) {
-            rejected.push(error.message || "No se pudo subir un archivo.");
-          }
+          console.error("No se pudo subir multimedia al servidor", { projectId: project.id, fileName: file.name, size: file.size, type: file.type, error });
+          rejected.push(error.message || `No se pudo subir ${file.name}.`);
         }
       }
       project.gallery.push(...uploaded);
       window.ROA.App.save();
-      renderGallery();
-      UI.toast(`${uploaded.length} archivo(s) agregado(s).`);
+      refreshGalleryView();
+      if (uploaded.length) UI.toast(`${uploaded.length} archivo(s) agregado(s).`);
       rejected.forEach((message) => UI.toast(message));
       return;
     }
@@ -106,7 +112,7 @@
       project.gallery.push(...images);
       project.updatedAt = Storage.now();
       window.ROA.App.save();
-      renderGallery();
+      refreshGalleryView();
       UI.toast(`${images.length} imagen(es) agregada(s).`);
       rejected.forEach((item) => UI.toast(item.error));
     } catch (error) {
@@ -154,7 +160,7 @@
       project.updatedAt = Storage.now();
       window.ROA.App.save();
       UI.closeModal();
-      renderGallery();
+      refreshGalleryView();
     });
   }
 
@@ -164,10 +170,20 @@
     if (!image) return;
     const ok = await UI.confirm("Enviar imagen a papelera", `Enviar "${image.name}" a papelera?`, "Enviar", true);
     if (!ok) return;
+    if (window.ROA.Api && window.ROA.Api.serverMode && window.ROA.Api.deleteMedia) {
+      try {
+        await window.ROA.Api.deleteMedia(imageId);
+      } catch (error) {
+        console.error("No se pudo borrar multimedia en servidor", { imageId, error });
+        UI.toast(error.message || "No se pudo borrar la multimedia en servidor.");
+        return;
+      }
+    }
     project.trash.push({ id: Storage.uid("trash"), kind: "image", title: image.name, payload: image, deletedAt: Storage.now() });
     project.gallery = project.gallery.filter((item) => item.id !== imageId);
     window.ROA.App.save();
-    renderGallery();
+    refreshGalleryView();
+    UI.toast("Multimedia enviada a papelera.");
   }
 
   window.ROA.Gallery = { renderGallery, handleUpload, openImage, editImage, deleteImage };

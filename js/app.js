@@ -164,7 +164,10 @@
       });
 
       UI.qs("#galleryInput").addEventListener("change", (event) => {
-        window.ROA.Gallery.handleUpload(Array.from(event.target.files || []));
+        window.ROA.Gallery.handleUpload(Array.from(event.target.files || [])).catch((error) => {
+          console.error("No se pudo procesar la subida de multimedia", error);
+          UI.toast(error.message || "No se pudo subir la multimedia.");
+        });
         event.target.value = "";
       });
 
@@ -373,7 +376,7 @@
           await window.ROA.Files.saveFile(fileId);
           break;
         case "trash-file":
-          window.ROA.Files.trashFile(fileId);
+          await window.ROA.Files.trashFile(fileId);
           break;
         case "toggle-favorite":
           window.ROA.Files.toggleFavorite(fileId);
@@ -440,7 +443,11 @@
           break;
         case "publish-current-file":
           if (this.view.params.fileId) {
-            await window.ROA.Files.saveFile(this.view.params.fileId, true);
+            const saved = await window.ROA.Files.saveFile(this.view.params.fileId, true);
+            if (!saved) {
+              UI.toast("No se pudo guardar el documento antes de publicarlo.");
+              break;
+            }
             window.ROA.Forum.openPostComposer(this.view.params.fileId);
           }
           break;
@@ -521,7 +528,7 @@
           window.ROA.Gallery.editImage(imageId);
           break;
         case "delete-image":
-          window.ROA.Gallery.deleteImage(imageId);
+          await window.ROA.Gallery.deleteImage(imageId);
           break;
         case "open-timeline":
           this.navigate("timeline");
@@ -542,10 +549,10 @@
           this.navigate("trash");
           break;
         case "restore-trash":
-          window.ROA.Files.restoreTrash(el.dataset.trashId);
+          await window.ROA.Files.restoreTrash(el.dataset.trashId);
           break;
         case "delete-trash":
-          window.ROA.Files.deleteTrash(el.dataset.trashId);
+          await window.ROA.Files.deleteTrash(el.dataset.trashId);
           break;
         case "open-search":
           this.navigate("search");
@@ -554,25 +561,25 @@
           window.ROA.Forum.openPostComposer();
           break;
         case "submit-forum-post":
-          window.ROA.Forum.submitPost();
+          await window.ROA.Forum.submitPost();
           break;
         case "open-forum-post":
           window.ROA.Forum.openPost(el.dataset.postId);
           break;
         case "submit-forum-comment":
-          window.ROA.Forum.submitComment(el.dataset.postId, el.dataset.parentCommentId || null);
+          await window.ROA.Forum.submitComment(el.dataset.postId, el.dataset.parentCommentId || null);
           break;
         case "show-reply-box":
           window.ROA.Forum.showReplyBox(el.dataset.commentId);
           break;
         case "submit-forum-reply":
-          window.ROA.Forum.submitReply(el.dataset.postId, el.dataset.parentCommentId);
+          await window.ROA.Forum.submitReply(el.dataset.postId, el.dataset.parentCommentId);
           break;
         case "vote-forum":
-          window.ROA.Forum.vote(el.dataset.targetType, el.dataset.targetId, el.dataset.voteType || "up");
+          await window.ROA.Forum.vote(el.dataset.targetType, el.dataset.targetId, el.dataset.voteType || "up");
           break;
         case "save-forum-post":
-          window.ROA.Forum.savePost(el.dataset.postId);
+          await window.ROA.Forum.savePost(el.dataset.postId);
           break;
         case "open-public-profile":
           window.ROA.Forum.openPublicProfile(el.dataset.userId);

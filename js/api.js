@@ -201,6 +201,7 @@
       Object.entries(metadata || {}).forEach(([key, value]) => form.append(key, value));
       return request(`/media/project/${projectId}`, { method: "POST", body: form });
     },
+    deleteMedia: (mediaId) => request(`/media/${mediaId}`, { method: "DELETE" }),
     getGallery: (projectId) => request(`/media/project/${projectId}`),
     getNotifications: () => request("/notifications"),
     requestAccess: (projectId, message) => request(`/access/projects/${projectId}/request`, json("POST", { message })),
