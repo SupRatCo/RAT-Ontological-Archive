@@ -1,6 +1,6 @@
 .forum-shell {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .forum-hero {
@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 20px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.18);
@@ -17,8 +17,12 @@
 .forum-hero h1 {
   margin: 0;
   color: var(--accent);
-  font-size: clamp(36px, 5vw, 72px);
+  font-size: clamp(28px, 4vw, 48px);
   text-transform: uppercase;
+}
+
+.compact-hero p {
+  display: none;
 }
 
 .forum-filters {
@@ -38,14 +42,15 @@
 
 .forum-card {
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-left: 4px solid var(--accent);
-  border-radius: 12px;
+  border-left: 2px solid var(--accent);
+  border-radius: 8px;
   padding: 16px;
   background: rgba(0, 0, 0, 0.18);
 }
 
-.forum-card h2 {
-  margin: 10px 0 8px;
+.forum-card h2,
+.forum-card strong {
+  margin: 8px 0 4px;
   color: var(--accent);
 }
 

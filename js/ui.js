@@ -194,7 +194,7 @@
     const root = UI.qs("#projectList");
     const user = window.ROA.Permissions.currentUser();
     root.innerHTML = app.data.projects.map((project) => `
-      <button class="project-pill ${project.id === app.data.activeProjectId ? "active" : ""}" type="button" data-action="select-project" data-project-id="${project.id}">
+      <button class="project-pill ${project.id === app.data.activeProjectId ? "active" : ""}" type="button" data-action="select-project" data-context-type="project" data-project-id="${project.id}">
         ${UI.escape(project.name)}
         <small>${UI.escape(project.visibility || "private")} / ${window.ROA.Permissions.roleFor(project, user && user.id)}</small>
       </button>
@@ -204,7 +204,7 @@
   UI.renderWelcome = function () {
     UI.qs("#mainView").innerHTML = UI.empty(
       "Archivo listo",
-      "Selecciona o crea un proyecto para comenzar a documentar tu mundo narrativo.",
+      "Selecciona o crea un proyecto.",
       "Crear proyecto",
       "create-project"
     );
@@ -250,10 +250,10 @@
   UI.renderListRow = function (project, file) {
     const canEdit = window.ROA.Permissions.canEdit(project);
     return `
-      <article class="list-row">
+      <article class="list-row" data-context-type="file" data-file-id="${file.id}">
         <div>
           <strong>${UI.escape(file.title)}</strong>
-          <span class="meta">${UI.fileTypeLabel(file.type)} / ${UI.escape(file.status || "Sin estado")} / ${UI.escape(file.visibility || "inherit")} / ${UI.formatDate(file.updatedAt)}</span>
+          <span class="meta">${UI.fileTypeLabel(file.type)} / ${UI.escape(file.status || "Sin estado")}</span>
           <div class="tag-list">${UI.renderTagsInline(project, file.tags)}</div>
         </div>
         <div class="inline-actions">

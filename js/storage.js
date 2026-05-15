@@ -20,6 +20,9 @@
       backgroundFit: "cover",
       backgroundOverlay: 35,
       customBackground: "",
+      language: "es-latam",
+      autosave: true,
+      uiFontScale: 100,
       lastSavedAt: null
     };
   }

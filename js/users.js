@@ -91,18 +91,25 @@
   function openProfile() {
     const user = window.ROA.Auth.currentUser();
     if (!user) return;
-    UI.openModal("Perfil de usuario", `
+    UI.openModal("Perfil", `
       <div class="profile-layout">
-        <section class="panel">
-          <h3>Cuenta</h3>
+        <section class="panel profile-editor-card">
+          <div class="profile-banner preview" style="${user.settings && user.settings.banner ? `background-image:url('${UI.escape(user.settings.banner)}')` : ""}"></div>
           <div class="profile-preview">
             <button class="profile-avatar-large" type="button" data-action="trigger-avatar-upload" style="${user.avatar ? `background-image:url('${user.avatar}')` : ""}">
               ${user.avatar ? "" : UI.escape(initials(user.username))}
             </button>
             <div>
               <label class="field">Nombre de usuario<input id="profileUsername" value="${UI.escape(user.username)}"></label>
+              <label class="field">Sobre mi<textarea id="profileBio" rows="3">${UI.escape((user.settings && user.settings.bio) || "")}</textarea></label>
+              <label class="field">Links<input id="profileLinks" value="${UI.escape((user.settings && user.settings.links) || "")}" placeholder="https://..."></label>
+              <label class="field">Color de perfil<input id="profileAccent" type="color" value="${UI.escape((user.settings && user.settings.accent) || "#ffd800")}"></label>
               <p class="meta">Creado: ${UI.formatDate(user.createdAt)}</p>
-              <button class="action" type="button" data-action="save-profile">Guardar perfil</button>
+              <div class="inline-actions">
+                <button class="ghost-action" type="button" data-action="trigger-avatar-upload">Avatar</button>
+                <button class="ghost-action" type="button" data-action="trigger-profile-banner-upload">Banner</button>
+                <button class="action" type="button" data-action="save-profile">Guardar</button>
+              </div>
             </div>
           </div>
         </section>
@@ -130,13 +137,28 @@
     `);
   }
 
-  function saveProfile() {
+  async function saveProfile() {
     const app = window.ROA.App;
     const user = window.ROA.Auth.currentUser();
     if (!user) return;
     const next = document.querySelector("#profileUsername").value.trim();
     if (!next) return;
     user.username = next;
+    user.settings = user.settings || {};
+    user.settings.bio = document.querySelector("#profileBio").value.trim();
+    user.settings.links = document.querySelector("#profileLinks").value.trim();
+    user.settings.accent = document.querySelector("#profileAccent").value;
+    if (window.ROA.Api && window.ROA.Api.serverMode) {
+      try {
+        const data = await window.ROA.Api.updateMe({ username: user.username, settings: user.settings });
+        user.username = data.user.username;
+        user.avatar = window.ROA.Api.assetUrl(data.user.avatar || data.user.avatar_url) || user.avatar;
+        user.settings = Object.assign(user.settings, data.user.settings || {});
+      } catch (error) {
+        UI.toast(error.message || "No se pudo guardar el perfil.");
+        return;
+      }
+    }
     app.save();
     renderProfileButton();
     UI.toast("Perfil actualizado.");
@@ -147,8 +169,16 @@
     const user = window.ROA.Auth.currentUser();
     if (!user || !file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       user.avatar = reader.result;
+      if (window.ROA.Api && window.ROA.Api.serverMode) {
+        try {
+          const data = await window.ROA.Api.uploadAvatar(file);
+          user.avatar = window.ROA.Api.assetUrl(data.user.avatar || data.user.avatar_url) || user.avatar;
+        } catch (error) {
+          UI.toast(error.message || "No se pudo subir el avatar al servidor.");
+        }
+      }
       window.ROA.App.save();
       renderProfileButton();
       openProfile();
@@ -156,6 +186,23 @@
     reader.readAsDataURL(file);
   }
 
+  function setBanner(file) {
+    const user = window.ROA.Auth.currentUser();
+    if (!user || !file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      user.settings = user.settings || {};
+      user.settings.banner = reader.result;
+      if (window.ROA.Api && window.ROA.Api.serverMode) {
+        try { await window.ROA.Api.updateMe({ settings: user.settings }); }
+        catch (error) { UI.toast(error.message || "No se pudo guardar el banner."); }
+      }
+      window.ROA.App.save();
+      openProfile();
+    };
+    reader.readAsDataURL(file);
+  }
+
   window.ROA = window.ROA || {};
-  window.ROA.Users = { openProfile, saveProfile, setAvatar, renderProfileButton, initials };
+  window.ROA.Users = { openProfile, saveProfile, setAvatar, setBanner, renderProfileButton, initials };
 })();

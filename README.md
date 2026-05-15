@@ -113,9 +113,11 @@ Important modules:
 - `js/config.js`: frontend API URL configuration.
 - `js/api.js`: centralized API calls.
 - `js/state.js`: global state, pending changes, autosave and save status.
-- `js/editor.js`: advanced text editor tools.
+- `js/editor.js`: WYSIWYG Docs editor tools.
 - `js/dynamicFields.js`: internal sections and custom fields.
 - `js/forum.js`: main forum/menu feed.
+- `js/contextMenu.js`: left-click contextual menus for projects, files, modules and forum posts.
+- `js/i18n.js`: lightweight language dictionaries.
 
 ## Main Features
 
@@ -124,15 +126,19 @@ Important modules:
 - Public/private projects and simulated roles: owner, editor and reader.
 - Access requests and notifications.
 - Project dashboards with base and custom modules.
-- Text files with Markdown/wiki preview.
-- Editor toolbar: bold, italic, underline, strike, title, subtitle, lists, quotes, separator, internal links, normal links, image insertion, emojis, font selector, size selector, clear text, on-screen keyboard and speech-to-text.
+- Documents with a visual WYSIWYG Docs editor.
+- Editor toolbar: save, publish, undo/redo, bold, italic, underline, strike, titles, lists, quotes, separator, alignment, internal links, normal links, image insertion, emojis, font selector, size selector, color, highlight, clear content, on-screen keyboard and speech-to-text.
+- Documents can be published to the forum as snapshots.
 - Autosave every 60 seconds and unsaved-change warnings.
 - Dynamic internal sections and custom fields for all file types.
 - Gallery for images and videos.
 - Character image matching by shared tags.
 - Minimized/expanded sidebar.
 - Main forum opened by clicking the RAT Ontological Archive logo.
-- Forum posts, comments, replies, votes, saved posts, filters, search and public profiles.
+- Forum posts, document posts, comments, direct replies, toggle likes, saved posts, filters, search and public profiles.
+- Profile customization with avatar, banner, bio, links and accent color.
+- Settings split into tabs: General, Account, Appearance, Audio, Video, Language, Data, Projects, Accessibility and Server.
+- Language selector for Spanish LATAM, Spanish Spain, English and Portuguese.
 
 ## Text Editor Notes
 

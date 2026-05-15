@@ -55,7 +55,7 @@
     if (window.ROA.Api && window.ROA.Api.serverMode) {
       try {
         const data = await window.ROA.Api.register(cleanName, password);
-        const user = Storage.normalizeUser({ id: data.user.id, username: data.user.username, avatar: data.user.avatar_url || data.user.avatar, createdAt: data.user.createdAt, settings: data.user.settings });
+        const user = Storage.normalizeUser({ id: data.user.id, username: data.user.username, avatar: window.ROA.Api.assetUrl(data.user.avatar_url || data.user.avatar), createdAt: data.user.createdAt, settings: data.user.settings });
         app.data.users = app.data.users.filter((item) => item.id !== user.id).concat(user);
         app.data.currentUserId = user.id;
         app.data.settings = Object.assign(Storage.defaultSettings(), user.settings || {});
@@ -96,7 +96,7 @@
     if (window.ROA.Api && window.ROA.Api.serverMode) {
       try {
         const data = await window.ROA.Api.login(username, password);
-        const user = Storage.normalizeUser({ id: data.user.id, username: data.user.username, avatar: data.user.avatar_url || data.user.avatar, createdAt: data.user.createdAt, settings: data.user.settings });
+        const user = Storage.normalizeUser({ id: data.user.id, username: data.user.username, avatar: window.ROA.Api.assetUrl(data.user.avatar_url || data.user.avatar), createdAt: data.user.createdAt, settings: data.user.settings });
         app.data.users = app.data.users.filter((item) => item.id !== user.id).concat(user);
         app.data.currentUserId = user.id;
         app.data.settings = Object.assign(Storage.defaultSettings(), user.settings || {});

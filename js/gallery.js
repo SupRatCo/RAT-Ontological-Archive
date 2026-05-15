@@ -68,8 +68,8 @@
           uploaded.push(window.ROA.Storage.normalizeMedia({
             id: result.media.id,
             name: result.media.name,
-            src: result.media.src,
-            data: result.media.src,
+            src: window.ROA.Api.assetUrl(result.media.src),
+            data: window.ROA.Api.assetUrl(result.media.src),
             kind: result.media.kind,
             type: result.media.kind,
             mimeType: result.media.mimeType,

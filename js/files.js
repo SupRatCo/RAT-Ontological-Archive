@@ -128,26 +128,23 @@
 
   function renderTextEditor(file) {
     const project = UI.currentProject();
-    const previewHidden = file.data && file.data.previewOpen === false ? "hidden" : "";
+    const contentHtml = window.ROA.Editor.markdownToHtml(file.content || "", project);
     document.querySelector("#mainView").innerHTML = `
       ${commonHeader(file, UI.fileTypeLabel(file.type))}
       ${renderMetaFields(file)}
-      <div class="split-layout">
-        <section class="panel">
-          <h3>Editor</h3>
+      <div class="docs-layout">
+        <section class="panel docs-panel">
           ${window.ROA.Editor.toolbar()}
-          <textarea id="fileContent" class="editor-textarea">${UI.escape(file.content || "")}</textarea>
-          <label class="field">Notas internas<textarea id="fileNotes">${UI.escape((file.data && file.data.notes) || "")}</textarea></label>
+          <div id="fileContent" class="docs-editor" contenteditable="true" spellcheck="true">${contentHtml}</div>
+          <details class="docs-details">
+            <summary>Notas</summary>
+            <label class="field">Notas internas<textarea id="fileNotes">${UI.escape((file.data && file.data.notes) || "")}</textarea></label>
+          </details>
           ${renderCustomSections(file)}
-        </section>
-        <section id="wikiPreviewPanel" class="panel ${previewHidden}">
-          <h3>Vista wiki</h3>
-          <div id="wikiPreview">${window.ROA.Editor.markdownToHtml(file.content || "", project)}</div>
         </section>
       </div>
     `;
     document.querySelector("#fileContent").addEventListener("input", (event) => {
-      document.querySelector("#wikiPreview").innerHTML = window.ROA.Editor.markdownToHtml(event.target.value, project);
       window.ROA.State.markDirty(file.id);
     });
   }
@@ -346,10 +343,10 @@
     if (!file) return;
     saveCommon(file);
     if (file.type === "text" || file.type === "generic") {
-      file.content = document.querySelector("#fileContent").value;
+      const contentNode = document.querySelector("#fileContent");
+      file.content = window.ROA.Forum && window.ROA.Forum.safeHtml ? window.ROA.Forum.safeHtml(contentNode.innerHTML) : contentNode.innerHTML;
       file.data = file.data || {};
       file.data.notes = document.querySelector("#fileNotes").value;
-      file.data.previewOpen = !document.querySelector("#wikiPreviewPanel").classList.contains("hidden");
     } else if (file.type === "world" || file.type === "organization") {
       file.data = file.data || {};
       UI.qsa("[data-path]", document.querySelector("#mainView")).forEach((input) => {

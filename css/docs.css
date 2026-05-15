@@ -1,0 +1,120 @@
+.docs-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.docs-panel {
+  padding: 14px;
+}
+
+.docs-topline {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.docs-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  background: rgba(0, 19, 33, .92);
+  backdrop-filter: blur(8px);
+}
+
+.docs-toolbar button,
+.docs-toolbar select,
+.docs-toolbar input {
+  min-height: 30px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 6px;
+  color: var(--text-main);
+  background: rgba(255,255,255,.06);
+  padding: 4px 8px;
+}
+
+.color-compact {
+  width: 36px;
+  padding: 0 !important;
+}
+
+.docs-editor,
+.docs-reader {
+  width: min(900px, 100%);
+  min-height: 60vh;
+  margin: 16px auto;
+  padding: 48px min(7vw, 72px);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  outline: none;
+  color: var(--text-main);
+  background: rgba(3, 13, 24, .78);
+  box-shadow: 0 22px 60px rgba(0,0,0,.28);
+  line-height: 1.65;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+}
+
+.docs-editor:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 22px 60px rgba(0,0,0,.32);
+}
+
+.docs-editor h1,
+.docs-reader h1 {
+  margin: 0 0 18px;
+  font-size: 36px;
+}
+
+.docs-editor h2,
+.docs-reader h2 {
+  margin: 24px 0 12px;
+  font-size: 24px;
+}
+
+.docs-editor blockquote,
+.docs-reader blockquote {
+  margin: 16px 0;
+  padding: 8px 16px;
+  border-left: 3px solid var(--accent);
+  color: var(--text-soft);
+}
+
+.embedded-media {
+  max-width: 100%;
+  border-radius: 8px;
+  display: block;
+  margin: 16px auto;
+}
+
+.docs-details {
+  width: min(900px, 100%);
+  margin: 0 auto;
+}
+
+body.docs-focus-mode .sidebar,
+body.docs-focus-mode .topbar,
+body.docs-focus-mode .view-header,
+body.docs-focus-mode .docs-details {
+  display: none;
+}
+
+body.docs-focus-mode .app-shell {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+body.docs-focus-mode .main-view {
+  grid-column: 1;
+  grid-row: 1;
+  padding: 24px;
+}

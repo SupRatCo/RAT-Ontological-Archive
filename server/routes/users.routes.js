@@ -7,12 +7,17 @@ const router = express.Router();
 const now = () => new Date().toISOString();
 
 function publicUser(user) {
+  const settings = JSON.parse(user.settings_json || "{}");
   return {
     id: user.id,
     username: user.username,
     avatar: user.avatar_url || "",
     avatar_url: user.avatar_url || "",
-    settings: JSON.parse(user.settings_json || "{}"),
+    banner: settings.banner || "",
+    bio: settings.bio || "",
+    links: settings.links || "",
+    accent: settings.accent || "",
+    settings,
     createdAt: user.created_at,
     updatedAt: user.updated_at
   };
@@ -31,7 +36,11 @@ router.patch("/me", requireAuth, async (req, res, next) => {
   try {
     const username = String(req.body.username || "").trim();
     const settings = req.body.settings ? JSON.stringify(req.body.settings) : null;
-    if (username) await run("UPDATE users SET username = ?, updated_at = ? WHERE id = ?", [username, now(), req.user.id]);
+    if (username) {
+      const existing = await get("SELECT id FROM users WHERE lower(username) = lower(?) AND id <> ?", [username, req.user.id]);
+      if (existing) return res.status(409).json({ error: "Ese nombre de usuario ya existe." });
+      await run("UPDATE users SET username = ?, updated_at = ? WHERE id = ?", [username, now(), req.user.id]);
+    }
     if (settings) await run("UPDATE users SET settings_json = ?, updated_at = ? WHERE id = ?", [settings, now(), req.user.id]);
     const user = await get("SELECT * FROM users WHERE id = ?", [req.user.id]);
     res.json({ user: publicUser(user) });

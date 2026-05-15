@@ -165,8 +165,10 @@ async function init() {
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     project_id TEXT,
+    source_file_id TEXT,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
+    content_snapshot TEXT,
     summary TEXT DEFAULT '',
     tags_json TEXT DEFAULT '[]',
     visibility TEXT DEFAULT 'public',
@@ -202,6 +204,15 @@ async function init() {
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`);
+  await ensureColumn("forum_posts", "source_file_id", "TEXT");
+  await ensureColumn("forum_posts", "content_snapshot", "TEXT");
+}
+
+async function ensureColumn(table, column, definition) {
+  const columns = await all(`PRAGMA table_info(${table})`);
+  if (!columns.some((item) => item.name === column)) {
+    await run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
 }
 
 module.exports = { db, init, run, get, all };

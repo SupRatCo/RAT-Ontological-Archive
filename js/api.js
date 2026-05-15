@@ -20,12 +20,25 @@
     const init = Object.assign({ headers: {} }, options || {});
     if (!(init.body instanceof FormData)) init.headers["Content-Type"] = "application/json";
     if (token()) init.headers.Authorization = `Bearer ${token()}`;
-    const response = await fetch(`${baseUrl}/api${path}`, init);
+    let response;
+    try {
+      response = await fetch(`${baseUrl}/api${path}`, init);
+    } catch (error) {
+      console.error("ROA API connection failed", { baseUrl, path, error });
+      throw new Error("No se pudo conectar con el servidor. Revisa que el backend este activo y que API_URL/CORS sean correctos.");
+    }
     const text = await response.text();
     let data = {};
     try { data = text ? JSON.parse(text) : {}; }
     catch (_error) { data = { error: text || response.statusText }; }
-    if (!response.ok) throw new Error(data.error || response.statusText);
+    if (!response.ok) {
+      console.error("ROA API request failed", { baseUrl, path, status: response.status, data });
+      if (response.status === 401) throw new Error("La sesion expiro o falta iniciar sesion.");
+      if (response.status === 403) throw new Error("No tienes permisos para hacer esto.");
+      if (response.status === 404) throw new Error("Ruta o registro no encontrado en el servidor.");
+      if (response.status >= 500) throw new Error("Error del servidor al guardar o consultar datos.");
+      throw new Error(data.error || response.statusText || "Error de API.");
+    }
     return data;
   }
 
@@ -49,12 +62,19 @@
     return { ok: true };
   }
 
+  function assetUrl(value) {
+    if (!value) return "";
+    if (/^(data:|https?:|blob:)/i.test(value)) return value;
+    return `${baseUrl}${String(value).startsWith("/") ? "" : "/"}${value}`;
+  }
+
   const api = {
     serverMode,
     baseUrl,
     token,
     setToken,
     request,
+    assetUrl,
     health: () => request("/health"),
     login,
     register,

@@ -139,6 +139,15 @@
         if (event.target.matches("[data-action='editor-size']")) {
           window.ROA.Editor.applySize(event.target.value);
         }
+        if (event.target.matches("[data-action='docs-block']")) {
+          window.ROA.Editor.applyBlock(event.target.value);
+        }
+        if (event.target.matches("[data-action='docs-color']")) {
+          window.ROA.Editor.applyColor(event.target.value);
+        }
+        if (event.target.matches("[data-action='docs-highlight']")) {
+          window.ROA.Editor.applyHighlight(event.target.value);
+        }
       });
 
       UI.qs("#projectImportInput").addEventListener("change", (event) => {
@@ -160,6 +169,11 @@
 
       UI.qs("#avatarInput").addEventListener("change", (event) => {
         window.ROA.Users.setAvatar(event.target.files[0]);
+        event.target.value = "";
+      });
+
+      UI.qs("#profileBannerInput").addEventListener("change", (event) => {
+        window.ROA.Users.setBanner(event.target.files[0]);
         event.target.value = "";
       });
 
@@ -236,6 +250,9 @@
         case "trigger-avatar-upload":
           UI.qs("#avatarInput").click();
           break;
+        case "trigger-profile-banner-upload":
+          UI.qs("#profileBannerInput").click();
+          break;
         case "logout":
           window.ROA.Auth.logout();
           break;
@@ -265,6 +282,12 @@
           break;
         case "open-settings":
           window.ROA.Settings.openSettings();
+          break;
+        case "settings-tab":
+          window.ROA.Settings.openSettings(el.dataset.settingsTab);
+          break;
+        case "test-server":
+          window.ROA.Settings.testServer();
           break;
         case "export-all":
           window.ROA.Settings.exportAll();
@@ -346,11 +369,20 @@
         case "editor-format":
           window.ROA.Editor.applyFormat(el.dataset.format);
           break;
+        case "docs-command":
+          window.ROA.Editor.command(el.dataset.command);
+          break;
+        case "docs-hr":
+          window.ROA.Editor.insertHr();
+          break;
         case "editor-font":
         case "editor-size":
           break;
         case "insert-internal-link":
           window.ROA.Editor.insertInternalLink();
+          break;
+        case "choose-internal-link":
+          window.ROA.Editor.chooseInternalLink(fileId);
           break;
         case "insert-normal-link":
           window.ROA.Editor.insertNormalLink();
@@ -363,6 +395,9 @@
           break;
         case "toggle-preview":
           window.ROA.Editor.togglePreview();
+          break;
+        case "toggle-focus-mode":
+          window.ROA.Editor.toggleFocusMode();
           break;
         case "open-emoji-panel":
           window.ROA.Editor.openEmojiPanel();
@@ -387,6 +422,15 @@
           break;
         case "manual-save-current-file":
           if (this.view.params.fileId) await window.ROA.Files.saveFile(this.view.params.fileId);
+          break;
+        case "publish-current-file":
+          if (this.view.params.fileId) {
+            await window.ROA.Files.saveFile(this.view.params.fileId, true);
+            window.ROA.Forum.openPostComposer(this.view.params.fileId);
+          }
+          break;
+        case "publish-file-by-id":
+          window.ROA.Forum.openPostComposer(fileId);
           break;
         case "add-internal-section":
           window.ROA.Files.addInternalSection(fileId);
@@ -502,6 +546,12 @@
           break;
         case "submit-forum-comment":
           window.ROA.Forum.submitComment(el.dataset.postId, el.dataset.parentCommentId || null);
+          break;
+        case "show-reply-box":
+          window.ROA.Forum.showReplyBox(el.dataset.commentId);
+          break;
+        case "submit-forum-reply":
+          window.ROA.Forum.submitReply(el.dataset.postId, el.dataset.parentCommentId);
           break;
         case "vote-forum":
           window.ROA.Forum.vote(el.dataset.targetType, el.dataset.targetId, el.dataset.voteType || "up");

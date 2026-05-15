@@ -32,9 +32,8 @@
       .filter((module) => module.visible !== false)
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .map((module) => `
-        <button class="card-button" type="button" data-action="${actionFor(module)}" data-module-id="${module.id}" style="${module.color ? `border-color:${UI.escape(module.color)}` : ""}">
+        <button class="card-button" type="button" data-action="${actionFor(module)}" data-context-type="module" data-module-id="${module.id}" style="${module.color ? `border-color:${UI.escape(module.color)}` : ""}">
           <strong style="${module.color ? `color:${UI.escape(module.color)}` : ""}">${UI.escape(module.name)}</strong>
-          <span>${UI.escape(descriptionFor(module))}</span>
           <span class="pill-mini">${countFor(project, module)} registros</span>
         </button>
       `).join("");

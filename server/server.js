@@ -102,7 +102,7 @@ function startFallbackServer() {
   }
 
   function load() {
-    if (!fs.existsSync(dataPath)) return { users: [], projects: [], sections: [], tags: [], files: [], posts: [], comments: [], media: [], notifications: [], tokens: {} };
+    if (!fs.existsSync(dataPath)) return { users: [], projects: [], sections: [], tags: [], files: [], posts: [], comments: [], votes: [], media: [], notifications: [], tokens: {} };
     return JSON.parse(fs.readFileSync(dataPath, "utf8"));
   }
 
@@ -166,6 +166,24 @@ function startFallbackServer() {
     }
     if (url.pathname === "/api/auth/me" && req.method === "GET") return user ? send(res, 200, { user }) : send(res, 401, { error: "Missing token" });
     if (url.pathname === "/api/auth/logout") return send(res, 200, { ok: true });
+    if (url.pathname === "/api/users/me" && req.method === "PATCH") {
+      if (!user) return send(res, 401, { error: "Missing token" });
+      if (body.username) user.username = String(body.username).trim();
+      if (body.settings) user.settings = Object.assign(user.settings || {}, body.settings);
+      user.updatedAt = now();
+      save(db);
+      return send(res, 200, { user });
+    }
+    const publicUserMatch = url.pathname.match(/^\/api\/users\/([^/]+)\/public$/);
+    if (publicUserMatch && req.method === "GET") {
+      const found = db.users.find((item) => item.id === publicUserMatch[1]);
+      if (!found) return send(res, 404, { error: "User not found" });
+      return send(res, 200, {
+        user: Object.assign({}, found, { password_hash: undefined, banner: (found.settings || {}).banner || "", bio: (found.settings || {}).bio || "" }),
+        posts: db.posts.filter((post) => post.userId === found.id && post.visibility !== "private"),
+        projects: db.projects.filter((project) => project.ownerId === found.id && project.visibility === "public")
+      });
+    }
 
     if (!user && !url.pathname.startsWith("/api/forum/posts")) return send(res, 401, { error: "Missing token" });
 
@@ -263,19 +281,43 @@ function startFallbackServer() {
       db.files = db.files.filter((file) => file.id !== fileMatch[1]); save(db); return send(res, 200, { ok: true });
     }
 
-    if (url.pathname === "/api/forum/posts" && req.method === "GET") return send(res, 200, { posts: db.posts.map((post) => Object.assign({}, post, { author: db.users.find((u) => u.id === post.userId), commentsCount: db.comments.filter((c) => c.postId === post.id).length })) });
+    if (url.pathname === "/api/forum/posts" && req.method === "GET") return send(res, 200, { posts: db.posts.map((post) => {
+      const votes = (db.votes || []).filter((vote) => vote.targetType === "post" && vote.targetId === post.id);
+      const existing = user && votes.find((vote) => vote.userId === user.id);
+      return Object.assign({}, post, { author: db.users.find((u) => u.id === post.userId), commentsCount: db.comments.filter((c) => c.postId === post.id).length, upvotes: votes.filter((v) => v.voteType === "up").length - votes.filter((v) => v.voteType === "down").length, liked: !!(existing && existing.voteType === "up") });
+    }) });
     if (url.pathname === "/api/forum/posts" && req.method === "POST") {
+      if (!String(body.title || "").trim()) return send(res, 400, { error: "El titulo no puede estar vacio." });
+      if (!String(body.content || "").trim()) return send(res, 400, { error: "El contenido no puede estar vacio." });
       const post = Object.assign({ id: uid("post"), userId: user.id, upvotes: 0, commentsCount: 0, createdAt: now(), updatedAt: now() }, body);
       db.posts.unshift(post); save(db); return send(res, 200, { post });
     }
     const postMatch = url.pathname.match(/^\/api\/forum\/posts\/([^/]+)$/);
-    if (postMatch && req.method === "GET") return send(res, 200, { post: db.posts.find((post) => post.id === postMatch[1]), comments: db.comments.filter((comment) => comment.postId === postMatch[1]) });
+    if (postMatch && req.method === "GET") {
+      const post = db.posts.find((item) => item.id === postMatch[1]);
+      const votes = (db.votes || []).filter((vote) => vote.targetType === "post" && vote.targetId === post.id);
+      const existing = user && votes.find((vote) => vote.userId === user.id);
+      return send(res, 200, { post: Object.assign({}, post, { author: db.users.find((u) => u.id === post.userId), upvotes: votes.filter((v) => v.voteType === "up").length - votes.filter((v) => v.voteType === "down").length, liked: !!(existing && existing.voteType === "up") }), comments: db.comments.filter((comment) => comment.postId === postMatch[1]) });
+    }
     const commentMatch = url.pathname.match(/^\/api\/forum\/posts\/([^/]+)\/comments$/);
     if (commentMatch && req.method === "POST") {
-      const comment = { id: uid("comment"), postId: commentMatch[1], userId: user.id, username: user.username, content: body.content, parentCommentId: body.parentCommentId || null, createdAt: now(), updatedAt: now() };
+      if (!String(body.content || "").trim()) return send(res, 400, { error: "El comentario no puede estar vacio." });
+      const comment = { id: uid("comment"), postId: commentMatch[1], userId: user.id, username: user.username, content: String(body.content).trim(), parentCommentId: body.parentCommentId || null, createdAt: now(), updatedAt: now() };
       db.comments.push(comment); save(db); return send(res, 200, { comment });
     }
-    if (url.pathname === "/api/forum/vote" && req.method === "POST") return send(res, 200, { ok: true });
+    if (url.pathname === "/api/forum/vote" && req.method === "POST") {
+      db.votes = db.votes || [];
+      const targetType = body.targetType === "comment" ? "comment" : "post";
+      const voteType = body.voteType === "down" ? "down" : "up";
+      const existing = db.votes.find((vote) => vote.userId === user.id && vote.targetType === targetType && vote.targetId === body.targetId);
+      let liked = false;
+      if (existing && existing.voteType === voteType) db.votes = db.votes.filter((vote) => vote !== existing);
+      else if (existing) { existing.voteType = voteType; liked = voteType === "up"; }
+      else { db.votes.push({ id: uid("vote"), userId: user.id, targetType, targetId: body.targetId, voteType, createdAt: now() }); liked = voteType === "up"; }
+      const votes = db.votes.filter((vote) => vote.targetType === targetType && vote.targetId === body.targetId);
+      save(db);
+      return send(res, 200, { ok: true, liked, upvotes: votes.filter((v) => v.voteType === "up").length - votes.filter((v) => v.voteType === "down").length });
+    }
     if (/^\/api\/forum\/posts\/[^/]+\/save$/.test(url.pathname)) return send(res, 200, { saved: true });
 
     send(res, 404, { error: "Not found" });

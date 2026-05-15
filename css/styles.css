@@ -24,6 +24,10 @@ select {
   font: inherit;
 }
 
+body {
+  font-size: calc(16px * var(--ui-font-scale, 100%) / 100);
+}
+
 button {
   cursor: pointer;
 }
@@ -147,6 +151,37 @@ body.animations-reduced *::after {
   padding: 24px;
   background: linear-gradient(135deg, var(--panel-bg), rgba(0,0,0,.82));
   box-shadow: 0 0 40px var(--glow), 0 30px 90px rgba(0,0,0,.6);
+}
+
+/* Minimal RAT refinement layer */
+.panel,
+.archive-card,
+.list-row,
+.modal {
+  border-width: 1px !important;
+  border-radius: 8px !important;
+}
+
+.panel p,
+.archive-card > span,
+.view-header p {
+  color: var(--text-soft);
+}
+
+.view-header {
+  gap: 12px;
+}
+
+.view-header h1 {
+  margin-bottom: 2px;
+}
+
+.action,
+.ghost-action,
+.danger-action,
+.icon-button,
+.profile-button {
+  border-radius: 7px !important;
 }
 
 .login-brand {
