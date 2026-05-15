@@ -1,4 +1,6 @@
 (function () {
+  let longPressTimer = null;
+
   function close() {
     const old = document.querySelector("#contextMenu");
     if (old) old.remove();
@@ -23,11 +25,35 @@
       item("Favorito", "toggle-favorite", { "file-id": id("fileId") }),
       item("Eliminar", "trash-file", { "file-id": id("fileId") })
     ];
+    if (type === "tag") return [
+      item("Ver relacionados", "open-tag-panel", { "tag-id": id("tagId") }),
+      item("Editar", "edit-tag", { "tag-id": id("tagId") }),
+      item("Eliminar", "delete-tag", { "tag-id": id("tagId") })
+    ];
+    if (type === "image" || type === "video" || type === "media") return [
+      item("Abrir", "open-image", { "image-id": id("imageId") }),
+      item("Editar", "edit-image", { "image-id": id("imageId") }),
+      item("Papelera", "delete-image", { "image-id": id("imageId") })
+    ];
+    if (type === "section") return [
+      item("Abrir", "open-section", { "section-id": id("sectionId") }),
+      item("Crear subseccion", "create-subsection", { "section-id": id("sectionId") }),
+      item("Editar", "edit-section", { "section-id": id("sectionId") }),
+      item("Eliminar", "delete-section", { "section-id": id("sectionId") })
+    ];
     if (type === "post") return [
       item("Abrir", "open-forum-post", { "post-id": id("postId") }),
       item("Like", "vote-forum", { "target-type": "post", "target-id": id("postId"), "vote-type": "up" }),
       item("Autor", "open-public-profile", { "user-id": id("userId") }),
       item("Guardar", "save-forum-post", { "post-id": id("postId") })
+    ];
+    if (type === "comment") return [
+      item("Responder", "show-reply-box", { "comment-id": id("commentId") }),
+      item("Like", "vote-forum", { "target-type": "comment", "target-id": id("commentId"), "vote-type": "up" }),
+      item("Ver perfil", "open-public-profile", { "user-id": id("userId") })
+    ];
+    if (type === "user") return [
+      item("Ver perfil", "open-public-profile", { "user-id": id("userId") })
     ];
     if (type === "module") return [
       item("Abrir", target.dataset.action || "open-dashboard", { "module-id": id("moduleId") }),
@@ -53,13 +79,38 @@
   document.addEventListener("click", (event) => {
     const menu = event.target.closest("#contextMenu");
     if (menu) return setTimeout(close, 0);
+    close();
+  }, true);
+
+  document.addEventListener("contextmenu", (event) => {
     const target = event.target.closest("[data-context-type]");
-    const actionTarget = event.target.closest("[data-action]");
-    if (!target || (actionTarget && actionTarget !== target)) return close();
+    if (!target) return;
+    if (!options(target.dataset.contextType, target).length) return;
     event.preventDefault();
     event.stopPropagation();
     open(event, target);
   }, true);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") close();
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    if (event.pointerType !== "touch") return;
+    const target = event.target.closest("[data-context-type]");
+    if (!target || !options(target.dataset.contextType, target).length) return;
+    clearTimeout(longPressTimer);
+    longPressTimer = setTimeout(() => {
+      open(event, target);
+    }, 620);
+  }, { passive: true });
+
+  ["pointerup", "pointercancel", "pointermove"].forEach((type) => {
+    document.addEventListener(type, () => {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }, { passive: true });
+  });
 
   window.ROA = window.ROA || {};
   window.ROA.ContextMenu = { open, close };

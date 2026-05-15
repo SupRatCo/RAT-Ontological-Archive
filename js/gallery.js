@@ -34,7 +34,7 @@
       </section>
       <section class="gallery-grid">
         ${images.map((image) => `
-          <article class="archive-card gallery-card">
+          <article class="archive-card gallery-card" data-context-type="${image.kind === "video" ? "video" : "image"}" data-image-id="${image.id}">
             ${image.kind === "video" ? `<div class="video-thumb">VIDEO</div>` : `<img loading="lazy" decoding="async" src="${UI.escape(image.src)}" alt="${UI.escape(image.name)}">`}
             <strong>${UI.escape(image.name)}</strong>
             <span>${UI.escape(image.description || "Sin descripcion.")}</span>

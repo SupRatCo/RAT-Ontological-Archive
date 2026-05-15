@@ -120,7 +120,7 @@
     const author = post.author || { id: post.userId, username: post.authorName || "Autor", avatar_url: post.authorAvatar || "" };
     return `
       <article class="forum-card" data-context-type="post" data-post-id="${post.id}" data-user-id="${author.id}">
-        <button class="forum-author" data-action="open-public-profile" data-user-id="${author.id}" type="button">
+        <button class="forum-author" data-action="open-public-profile" data-context-type="user" data-user-id="${author.id}" type="button">
           ${avatar(author)}
           <span>${UI.escape(author.username || "Autor")}</span>
         </button>
@@ -216,7 +216,7 @@
     const author = post.author || { id: post.userId, username: post.authorName || "Autor", avatar_url: post.authorAvatar || "" };
     UI.openModal(post.title, `
       <article class="forum-full">
-        <button class="forum-author" data-action="open-public-profile" data-user-id="${author.id}" type="button">${avatar(author)}<span>${UI.escape(author.username || "Autor")}</span></button>
+        <button class="forum-author" data-action="open-public-profile" data-context-type="user" data-user-id="${author.id}" type="button">${avatar(author)}<span>${UI.escape(author.username || "Autor")}</span></button>
         <div class="docs-reader">${safeHtml(post.content)}</div>
         <div class="inline-actions">
           <button class="${post.liked ? "liked" : ""}" data-action="vote-forum" data-target-type="post" data-target-id="${post.id}" data-vote-type="up">Like ${post.upvotes || 0}</button>
@@ -238,8 +238,8 @@
       const author = { id: comment.user_id || comment.userId, username: comment.username || "Usuario", avatar_url: comment.avatar_url || comment.avatar || "" };
       const replies = children.filter((item) => (item.parent_comment_id || item.parentCommentId) === comment.id);
       return `
-        <article class="comment-card depth-${Math.min(depth, 2)}">
-          <button class="forum-author compact" data-action="open-public-profile" data-user-id="${author.id}" type="button">${avatar(author)}<span>${UI.escape(author.username)}</span></button>
+        <article class="comment-card depth-${Math.min(depth, 2)}" data-context-type="comment" data-comment-id="${comment.id}" data-user-id="${author.id}">
+          <button class="forum-author compact" data-action="open-public-profile" data-context-type="user" data-user-id="${author.id}" type="button">${avatar(author)}<span>${UI.escape(author.username)}</span></button>
           <p>${UI.escape(comment.content || "")}</p>
           <div class="inline-actions">
             <button class="ghost-action" data-action="show-reply-box" data-post-id="${comment.post_id || comment.postId}" data-comment-id="${comment.id}" type="button">Responder</button>

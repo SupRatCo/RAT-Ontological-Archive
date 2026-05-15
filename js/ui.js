@@ -233,7 +233,7 @@
     return ids.map((id) => {
       const tag = project.tags.find((item) => item.id === id);
       if (!tag) return "";
-      return `<button class="tag-chip" style="color:${UI.escape(tag.color || "var(--accent)")}" data-action="open-tag-panel" data-tag-id="${tag.id}" type="button">${UI.escape(tag.name)}</button>`;
+      return `<button class="tag-chip" style="color:${UI.escape(tag.color || "var(--accent)")}" data-action="open-tag-panel" data-context-type="tag" data-tag-id="${tag.id}" type="button">${UI.escape(tag.name)}</button>`;
     }).join("");
   };
 

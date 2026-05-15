@@ -20,7 +20,7 @@
       </section>
       <section class="card-grid">
         ${project.tags.map((tag) => `
-          <article class="archive-card" style="border-color:${UI.escape(tag.color || "var(--accent)")}">
+          <article class="archive-card" data-context-type="tag" data-tag-id="${tag.id}" style="border-color:${UI.escape(tag.color || "var(--accent)")}">
             <strong style="color:${UI.escape(tag.color || "var(--accent)")}">${UI.escape(tag.name)}</strong>
             <span>${UI.escape(tag.category || "Personalizada")}</span>
             <span>${UI.escape(tag.description || "Sin descripcion.")}</span>

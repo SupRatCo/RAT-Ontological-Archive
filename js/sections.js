@@ -16,7 +16,7 @@
     const canEdit = window.ROA.Permissions.canEdit(UI.currentProject());
     const nodes = (map.get(parentId || "root") || []).sort((a, b) => a.name.localeCompare(b.name));
     return nodes.map((section) => `
-      <div class="tree-item" style="margin-left:${level * 18}px">
+      <div class="tree-item" data-context-type="section" data-section-id="${section.id}" style="margin-left:${level * 18}px">
         <div>
           <strong>${UI.escape(section.name)}</strong>
           <span class="meta">${UI.escape(section.description || "Sin descripcion")}</span>
@@ -86,7 +86,7 @@
           <h3>Subsecciones</h3>
           <div class="item-list">
             ${subsections.map((item) => `
-              <article class="list-row">
+              <article class="list-row" data-context-type="section" data-section-id="${item.id}">
                 <div><strong>${UI.escape(item.name)}</strong><span class="meta">${UI.escape(item.description || "")}</span></div>
                 <button class="action" type="button" data-action="open-section" data-section-id="${item.id}">Abrir</button>
               </article>
