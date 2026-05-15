@@ -1,6 +1,6 @@
 (function () {
   const isLocalHost = ["localhost", "127.0.0.1", ""].includes(window.location.hostname) || window.location.protocol === "file:";
-  const onlineBackend = "";
+  const onlineBackend = "https://rat-ontological-api.onrender.com";
   window.ROA_CONFIG = Object.assign({
     LOCAL_API_URL: "http://localhost:3000",
     PRODUCTION_API_URL: onlineBackend,
