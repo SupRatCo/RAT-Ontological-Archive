@@ -301,6 +301,9 @@
         case "test-server":
           window.ROA.Settings.testServer();
           break;
+        case "clear-server-errors":
+          window.ROA.Settings.clearServerErrors();
+          break;
         case "export-all":
           window.ROA.Settings.exportAll();
           break;

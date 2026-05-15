@@ -23,6 +23,20 @@
     recentErrors.splice(8);
   }
 
+  function clearErrors(predicate) {
+    if (typeof predicate !== "function") {
+      recentErrors.splice(0);
+      return;
+    }
+    for (let index = recentErrors.length - 1; index >= 0; index -= 1) {
+      if (predicate(recentErrors[index])) recentErrors.splice(index, 1);
+    }
+  }
+
+  function clearHealthErrors() {
+    clearErrors((item) => item.path === "/health" || /\/api\/health$/i.test(item.url || ""));
+  }
+
   function token() {
     return localStorage.getItem(tokenKey) || "";
   }
@@ -114,8 +128,11 @@
         ok: true,
         message: "Servidor conectado.",
         latency: Math.round(performance.now() - started),
-        mode: health.mode || "api"
+        mode: health.mode || "api",
+        lastSuccessfulAt: new Date().toISOString(),
+        lastTestedUrl: apiUrl("/health")
       });
+      clearHealthErrors();
     } catch (error) {
       Object.assign(connection, {
         checked: true,
@@ -144,6 +161,8 @@
     setToken,
     request,
     recentErrors,
+    clearErrors,
+    clearHealthErrors,
     connection,
     assetUrl,
     health: () => request("/health"),

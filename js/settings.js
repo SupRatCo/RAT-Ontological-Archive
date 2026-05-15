@@ -104,7 +104,7 @@
     if (tab === "data") return `<div class="panel flat"><h3>Datos</h3><p class="meta">Ultimo guardado: ${UI.formatDate(settings.lastSavedAt)}</p><button class="action" data-action="export-all" type="button">Exportar</button><button class="ghost-action" data-action="trigger-backup-import" type="button">Importar</button><button class="danger-action" data-action="reset-all-data" type="button">Borrar todo</button></div>`;
     if (tab === "projects") return `<div class="panel flat"><h3>Proyectos</h3><div class="item-list">${projects.map((project) => `<article class="list-row"><strong>${UI.escape(project.name)}</strong><span class="meta">${UI.escape(project.visibility || "private")}</span><div class="inline-actions"><button class="action" data-action="select-project" data-project-id="${project.id}">Abrir</button><button class="ghost-action" data-action="toggle-project-visibility" data-project-id="${project.id}">Visibilidad</button><button class="danger-action" data-action="delete-project-by-id" data-project-id="${project.id}">Eliminar</button></div></article>`).join("") || "<p class='meta'>Sin proyectos.</p>"}</div></div>`;
     if (tab === "accessibility") return `<div class="panel flat"><h3>Accesibilidad</h3><label class="field">Tamaño UI <span id="uiFontScaleValue">${settings.uiFontScale || 100}</span>%<input id="settingUiFontScale" type="range" min="85" max="125" value="${settings.uiFontScale || 100}"></label><label class="switch-row"><strong>Reducir movimiento</strong><input id="settingAnimations" type="checkbox" ${settings.animations === false ? "checked" : ""}></label></div>`;
-    if (tab === "server") return `<div class="panel flat"><h3>Servidor</h3><p class="meta">API: ${UI.escape(window.ROA.Api.baseUrl || "Sin configurar")}</p><p class="meta">Health: ${UI.escape(window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : "Sin configurar")}</p><button class="action" type="button" data-action="test-server">Probar conexion</button><div id="serverStatus" class="server-diagnostics meta">${renderServerDiagnostics()}</div></div>`;
+    if (tab === "server") return `<div class="panel flat"><h3>Servidor</h3><p class="meta">API: ${UI.escape(window.ROA.Api.baseUrl || "Sin configurar")}</p><p class="meta">Health: ${UI.escape(window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : "Sin configurar")}</p><div class="inline-actions"><button class="action" type="button" data-action="test-server">Probar conexion</button><button class="ghost-action" type="button" data-action="clear-server-errors">Limpiar historial de errores</button></div><div id="serverStatus" class="server-diagnostics meta">${renderServerDiagnostics()}</div></div>`;
     return `<div class="panel flat"><h3>General</h3><label class="switch-row"><strong>Autoguardado</strong><input id="settingAutosave" type="checkbox" ${settings.autosave !== false ? "checked" : ""}></label></div>`;
   }
 
@@ -139,7 +139,17 @@
     try {
       const health = await window.ROA.Api.health();
       const ms = Math.round(performance.now() - started);
-      if (node) node.innerHTML = renderServerDiagnostics({ ok: true, mode: health.mode || "api", latency: ms, testedUrl: healthUrl });
+      Object.assign(window.ROA.Api.connection, {
+        checked: true,
+        ok: true,
+        message: "Servidor conectado.",
+        latency: ms,
+        mode: health.mode || "api",
+        lastSuccessfulAt: new Date().toISOString(),
+        lastTestedUrl: healthUrl
+      });
+      if (window.ROA.Api.clearHealthErrors) window.ROA.Api.clearHealthErrors();
+      if (node) node.innerHTML = renderServerDiagnostics({ ok: true, mode: health.mode || "api", latency: ms, testedUrl: healthUrl, successAt: window.ROA.Api.connection.lastSuccessfulAt });
     } catch (error) {
       const lastError = window.ROA.Api.recentErrors && window.ROA.Api.recentErrors[0];
       const friendly = lastError && lastError.status === 404 ? "Ruta de health incorrecta." : (error.message || "No se pudo conectar con el servidor.");
@@ -149,22 +159,35 @@
 
   function renderServerDiagnostics(result) {
     const errors = (window.ROA.Api && window.ROA.Api.recentErrors || []).slice(0, 5);
-    const healthUrl = result && result.testedUrl ? result.testedUrl : (window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : "");
+    const connection = window.ROA.Api ? window.ROA.Api.connection || {} : {};
+    const effective = result || (connection.checked ? connection : null);
+    const healthUrl = result && result.testedUrl ? result.testedUrl : (connection.lastTestedUrl || (window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : ""));
     const detailParts = [];
-    if (result && result.latency) detailParts.push(`${result.latency} ms`);
-    if (result && result.mode) detailParts.push(UI.escape(result.mode));
-    if (result && result.error) detailParts.push(UI.escape(result.error));
-    const current = result
-      ? `<p><strong>${result.ok ? "Conectado" : "Desconectado"}</strong>${detailParts.length ? ` · ${detailParts.join(" · ")}` : ""}</p>`
+    if (effective && effective.latency) detailParts.push(`${effective.latency} ms`);
+    if (effective && effective.mode) detailParts.push(UI.escape(effective.mode));
+    if (effective && effective.error) detailParts.push(UI.escape(effective.error));
+    if (effective && !effective.ok && effective.message) detailParts.push(UI.escape(effective.message));
+    const successAt = (result && result.successAt) || connection.lastSuccessfulAt || "";
+    const current = effective
+      ? `<p><strong>Estado actual: ${effective.ok ? "Conectado" : "Desconectado"}</strong>${detailParts.length ? ` · ${detailParts.join(" · ")}` : ""}</p>`
       : `<p><strong>Sin probar</strong></p>`;
     return `
       ${current}
+      ${successAt ? `<p>Ultima prueba exitosa: ${UI.formatDate(successAt)}</p>` : ""}
       <p>URL base: ${UI.escape(window.ROA.Api.baseUrl || "No configurada")}</p>
       <p>Health URL: ${UI.escape(healthUrl || "No configurada")}</p>
-      <div class="diagnostic-list">
+      <details class="diagnostic-list">
+        <summary>Errores anteriores (${errors.length})</summary>
         ${errors.map((item) => `<span>${UI.escape(item.at)} · ${UI.escape(item.url || item.path || "")} · ${UI.escape(item.message || item.type || "error")}</span>`).join("") || "<span>Sin errores recientes.</span>"}
-      </div>
+      </details>
     `;
+  }
+
+  function clearServerErrors() {
+    if (window.ROA.Api && window.ROA.Api.clearErrors) window.ROA.Api.clearErrors();
+    const node = UI.qs("#serverStatus");
+    if (node) node.innerHTML = renderServerDiagnostics();
+    UI.toast("Historial de errores limpiado.");
   }
 
   function exportAll() {
@@ -201,6 +224,6 @@
     if (volume && !muted) window.ROA.lastSoundRequest = { name, volume, at: Date.now() };
   }
 
-  window.ROA.Settings = { applySettings, openSettings, exportAll, resetAllData, importBackupFile, playSound, themeLabels, testServer };
+  window.ROA.Settings = { applySettings, openSettings, exportAll, resetAllData, importBackupFile, playSound, themeLabels, testServer, clearServerErrors };
   window.playSound = playSound;
 })();
