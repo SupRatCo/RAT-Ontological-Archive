@@ -18,6 +18,8 @@ const defaultAllowedOrigins = [
   "https://supratco.github.io",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
   "http://localhost:5500",
   "http://127.0.0.1:5500"
 ];
@@ -75,16 +77,30 @@ if (hasPackage("express") && hasPackage("sqlite3")) {
   console.log("SQLite database path:", dbPath);
 
   const app = express();
-  app.get("/api/health", (_req, res) => res.json({ ok: true, mode: "express-sqlite", name: "RAT Ontological Archive" }));
-  console.log("Health endpoint registered: /api/health");
-  app.use(cors({
+  const corsOptions = {
     origin(origin, callback) {
-      if (isAllowedOrigin(origin)) callback(null, true);
-      else callback(new Error(`CORS origin not allowed: ${origin}`));
+      if (!origin) return callback(null, true);
+      if (isAllowedOrigin(origin)) return callback(null, true);
+      console.warn("CORS blocked origin:", origin);
+      return callback(new Error(`CORS blocked origin: ${origin}`));
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  }));
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: false
+  };
+  app.use(cors(corsOptions));
+  app.options("*", cors(corsOptions));
+  console.log("CORS middleware registered before API routes. Allowed origins:", Array.from(allowedOrigins).join(", "));
+  app.get("/api/health", (_req, res) => res.json({ ok: true, mode: "express-sqlite", name: "RAT Ontological Archive" }));
+  app.get("/api/cors-test", (req, res) => {
+    res.json({
+      ok: true,
+      origin: req.headers.origin || null,
+      message: "CORS test passed"
+    });
+  });
+  console.log("Health endpoint registered: /api/health");
+  console.log("CORS test endpoint registered: /api/cors-test");
   app.use(express.json({ limit: "8mb" }));
   app.use(express.urlencoded({ extended: true }));
   app.use((_req, res, next) => {

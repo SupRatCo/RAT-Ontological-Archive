@@ -50,10 +50,18 @@
     if (token()) init.headers.Authorization = `Bearer ${token()}`;
     let response;
     const url = apiUrl(path);
+    const method = init.method || "GET";
     try {
       response = await fetch(url, init);
     } catch (error) {
-      console.error("ROA API connection failed", { baseUrl, path, url, error });
+      console.error("ROA API connection failed", {
+        url,
+        method,
+        origin: location.origin,
+        message: error.message,
+        probableCause: "network/cors",
+        error
+      });
       recordError(path, { type: "connection", url, message: error.message || "Failed to fetch" });
       throw new Error("No se pudo conectar con el servidor. Revisa que el backend este activo y que API_URL/CORS sean correctos.");
     }
@@ -62,7 +70,7 @@
     try { data = text ? JSON.parse(text) : {}; }
     catch (_error) { data = { error: text || response.statusText }; }
     if (!response.ok) {
-      console.error("ROA API request failed", { baseUrl, path, url, status: response.status, data });
+      console.error("ROA API request failed", { url, method, origin: location.origin, status: response.status, data });
       recordError(path, { type: "http", status: response.status, url, message: data.error || response.statusText || "Error de API." });
       if (response.status === 401) throw new Error("La sesion expiro o falta iniciar sesion.");
       if (response.status === 403) throw new Error("No tienes permisos para hacer esto.");
