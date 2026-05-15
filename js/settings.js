@@ -150,13 +150,19 @@
   function renderServerDiagnostics(result) {
     const errors = (window.ROA.Api && window.ROA.Api.recentErrors || []).slice(0, 5);
     const healthUrl = result && result.testedUrl ? result.testedUrl : (window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : "");
-    const current = result ? `<p><strong>${result.ok ? "Conectado" : "Desconectado"}</strong>${result.latency ? ` · ${result.latency} ms` : ""}${result.mode ? ` · ${UI.escape(result.mode)}` : ""}${result.error ? ` · ${UI.escape(result.error)}` : ""}</p>` : `<p>Estado: sin probar</p>`;
+    const detailParts = [];
+    if (result && result.latency) detailParts.push(`${result.latency} ms`);
+    if (result && result.mode) detailParts.push(UI.escape(result.mode));
+    if (result && result.error) detailParts.push(UI.escape(result.error));
+    const current = result
+      ? `<p><strong>${result.ok ? "Conectado" : "Desconectado"}</strong>${detailParts.length ? ` · ${detailParts.join(" · ")}` : ""}</p>`
+      : `<p><strong>Sin probar</strong></p>`;
     return `
       ${current}
-      <p>URL actual: ${UI.escape(window.ROA.Api.baseUrl || "No configurada")}</p>
-      <p>Probando: ${UI.escape(healthUrl || "No configurada")}</p>
+      <p>URL base: ${UI.escape(window.ROA.Api.baseUrl || "No configurada")}</p>
+      <p>Health URL: ${UI.escape(healthUrl || "No configurada")}</p>
       <div class="diagnostic-list">
-        ${errors.map((item) => `<span>${UI.escape(item.at)} · ${UI.escape(item.url || item.path)} · ${UI.escape(item.message || item.type || "error")}</span>`).join("") || "<span>Sin errores recientes.</span>"}
+        ${errors.map((item) => `<span>${UI.escape(item.at)} · ${UI.escape(item.url || item.path || "")} · ${UI.escape(item.message || item.type || "error")}</span>`).join("") || "<span>Sin errores recientes.</span>"}
       </div>
     `;
   }
