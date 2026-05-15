@@ -104,7 +104,7 @@
     if (tab === "data") return `<div class="panel flat"><h3>Datos</h3><p class="meta">Ultimo guardado: ${UI.formatDate(settings.lastSavedAt)}</p><button class="action" data-action="export-all" type="button">Exportar</button><button class="ghost-action" data-action="trigger-backup-import" type="button">Importar</button><button class="danger-action" data-action="reset-all-data" type="button">Borrar todo</button></div>`;
     if (tab === "projects") return `<div class="panel flat"><h3>Proyectos</h3><div class="item-list">${projects.map((project) => `<article class="list-row"><strong>${UI.escape(project.name)}</strong><span class="meta">${UI.escape(project.visibility || "private")}</span><div class="inline-actions"><button class="action" data-action="select-project" data-project-id="${project.id}">Abrir</button><button class="ghost-action" data-action="toggle-project-visibility" data-project-id="${project.id}">Visibilidad</button><button class="danger-action" data-action="delete-project-by-id" data-project-id="${project.id}">Eliminar</button></div></article>`).join("") || "<p class='meta'>Sin proyectos.</p>"}</div></div>`;
     if (tab === "accessibility") return `<div class="panel flat"><h3>Accesibilidad</h3><label class="field">Tamaño UI <span id="uiFontScaleValue">${settings.uiFontScale || 100}</span>%<input id="settingUiFontScale" type="range" min="85" max="125" value="${settings.uiFontScale || 100}"></label><label class="switch-row"><strong>Reducir movimiento</strong><input id="settingAnimations" type="checkbox" ${settings.animations === false ? "checked" : ""}></label></div>`;
-    if (tab === "server") return `<div class="panel flat"><h3>Servidor</h3><p class="meta">API: ${UI.escape(window.ROA.Api.baseUrl || "Sin configurar")}</p><button class="action" type="button" data-action="test-server">Probar conexion</button><div id="serverStatus" class="server-diagnostics meta">${renderServerDiagnostics()}</div></div>`;
+    if (tab === "server") return `<div class="panel flat"><h3>Servidor</h3><p class="meta">API: ${UI.escape(window.ROA.Api.baseUrl || "Sin configurar")}</p><p class="meta">Health: ${UI.escape(window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : "Sin configurar")}</p><button class="action" type="button" data-action="test-server">Probar conexion</button><div id="serverStatus" class="server-diagnostics meta">${renderServerDiagnostics()}</div></div>`;
     return `<div class="panel flat"><h3>General</h3><label class="switch-row"><strong>Autoguardado</strong><input id="settingAutosave" type="checkbox" ${settings.autosave !== false ? "checked" : ""}></label></div>`;
   }
 
@@ -133,25 +133,30 @@
 
   async function testServer() {
     const node = UI.qs("#serverStatus");
-    if (node) node.textContent = "Probando...";
+    const healthUrl = window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : "";
+    if (node) node.innerHTML = `<p>Probando: ${UI.escape(healthUrl || "URL no configurada")}</p>`;
     const started = performance.now();
     try {
       const health = await window.ROA.Api.health();
       const ms = Math.round(performance.now() - started);
-      if (node) node.innerHTML = renderServerDiagnostics({ ok: true, mode: health.mode || "api", latency: ms });
+      if (node) node.innerHTML = renderServerDiagnostics({ ok: true, mode: health.mode || "api", latency: ms, testedUrl: healthUrl });
     } catch (error) {
-      if (node) node.innerHTML = renderServerDiagnostics({ ok: false, error: error.message });
+      const lastError = window.ROA.Api.recentErrors && window.ROA.Api.recentErrors[0];
+      const friendly = lastError && lastError.status === 404 ? "Ruta de health incorrecta." : (error.message || "No se pudo conectar con el servidor.");
+      if (node) node.innerHTML = renderServerDiagnostics({ ok: false, error: friendly, testedUrl: healthUrl });
     }
   }
 
   function renderServerDiagnostics(result) {
     const errors = (window.ROA.Api && window.ROA.Api.recentErrors || []).slice(0, 5);
+    const healthUrl = result && result.testedUrl ? result.testedUrl : (window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : "");
     const current = result ? `<p><strong>${result.ok ? "Conectado" : "Desconectado"}</strong>${result.latency ? ` · ${result.latency} ms` : ""}${result.mode ? ` · ${UI.escape(result.mode)}` : ""}${result.error ? ` · ${UI.escape(result.error)}` : ""}</p>` : `<p>Estado: sin probar</p>`;
     return `
       ${current}
       <p>URL actual: ${UI.escape(window.ROA.Api.baseUrl || "No configurada")}</p>
+      <p>Probando: ${UI.escape(healthUrl || "No configurada")}</p>
       <div class="diagnostic-list">
-        ${errors.map((item) => `<span>${UI.escape(item.at)} · ${UI.escape(item.path)} · ${UI.escape(item.message || item.type || "error")}</span>`).join("") || "<span>Sin errores recientes.</span>"}
+        ${errors.map((item) => `<span>${UI.escape(item.at)} · ${UI.escape(item.url || item.path)} · ${UI.escape(item.message || item.type || "error")}</span>`).join("") || "<span>Sin errores recientes.</span>"}
       </div>
     `;
   }

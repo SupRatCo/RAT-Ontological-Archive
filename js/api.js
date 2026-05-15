@@ -1,6 +1,6 @@
 (function () {
   const config = window.ROA_CONFIG || {};
-  const configuredApiUrl = String(config.API_URL || config.PRODUCTION_API_URL || "").replace(/\/+$/, "");
+  const configuredApiUrl = String(config.API_URL || config.PRODUCTION_API_URL || "").replace(/\/+$/, "").replace(/\/api$/i, "");
   const isHostedStatic = /(^|\.)github\.io$/i.test(location.hostname);
   const fallbackApiUrl = location.protocol === "file:" || isHostedStatic ? "" : location.origin;
   const baseUrl = configuredApiUrl || fallbackApiUrl;
@@ -32,6 +32,14 @@
     else localStorage.removeItem(tokenKey);
   }
 
+  function apiUrl(path) {
+    const cleanPath = String(path || "");
+    const apiPath = cleanPath.startsWith("/api/")
+      ? cleanPath
+      : `/api${cleanPath.startsWith("/") ? "" : "/"}${cleanPath}`;
+    return `${baseUrl}${apiPath}`;
+  }
+
   async function request(path, options) {
     if (!serverMode) {
       recordError(path, { type: "config", message: "API_URL no esta configurada." });
@@ -41,11 +49,12 @@
     if (!(init.body instanceof FormData)) init.headers["Content-Type"] = "application/json";
     if (token()) init.headers.Authorization = `Bearer ${token()}`;
     let response;
+    const url = apiUrl(path);
     try {
-      response = await fetch(`${baseUrl}/api${path}`, init);
+      response = await fetch(url, init);
     } catch (error) {
-      console.error("ROA API connection failed", { baseUrl, path, error });
-      recordError(path, { type: "connection", message: error.message || "Failed to fetch" });
+      console.error("ROA API connection failed", { baseUrl, path, url, error });
+      recordError(path, { type: "connection", url, message: error.message || "Failed to fetch" });
       throw new Error("No se pudo conectar con el servidor. Revisa que el backend este activo y que API_URL/CORS sean correctos.");
     }
     const text = await response.text();
@@ -53,8 +62,8 @@
     try { data = text ? JSON.parse(text) : {}; }
     catch (_error) { data = { error: text || response.statusText }; }
     if (!response.ok) {
-      console.error("ROA API request failed", { baseUrl, path, status: response.status, data });
-      recordError(path, { type: "http", status: response.status, message: data.error || response.statusText || "Error de API." });
+      console.error("ROA API request failed", { baseUrl, path, url, status: response.status, data });
+      recordError(path, { type: "http", status: response.status, url, message: data.error || response.statusText || "Error de API." });
       if (response.status === 401) throw new Error("La sesion expiro o falta iniciar sesion.");
       if (response.status === 403) throw new Error("No tienes permisos para hacer esto.");
       if (response.status === 404) throw new Error("Ruta o registro no encontrado en el servidor.");
@@ -121,6 +130,8 @@
     serverMode,
     requiresServer: isHostedStatic,
     baseUrl,
+    apiUrl,
+    healthUrl: () => serverMode ? apiUrl("/health") : "",
     token,
     setToken,
     request,
