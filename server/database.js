@@ -1,9 +1,12 @@
 const path = require("path");
+const fs = require("fs");
 const sqlite3 = require("sqlite3").verbose();
 
 const dbPath = process.env.DATABASE_PATH
   ? path.resolve(__dirname, process.env.DATABASE_PATH)
   : path.join(__dirname, "data", "database.sqlite");
+
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 const db = new sqlite3.Database(dbPath);
 
@@ -231,4 +234,4 @@ async function ensureColumn(table, column, definition) {
   }
 }
 
-module.exports = { db, init, run, get, all };
+module.exports = { db, dbPath, init, run, get, all };

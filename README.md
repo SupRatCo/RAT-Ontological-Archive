@@ -85,6 +85,70 @@ http://localhost:3000/api/health
 
 The fallback server returns `mode: "fallback-json"` and stores temporary development data in `server/data/fallback-db.json`.
 
+## Render Troubleshooting
+
+Recommended Render settings for the backend service:
+
+```txt
+Root Directory: server
+Build Command: npm install
+Start Command: npm start
+Runtime: Node 20 LTS
+```
+
+If Render shows only this and exits:
+
+```txt
+==> Running 'npm start'
+> node server.js
+==> Exited with status 1
+```
+
+Check the startup logs printed by `server/server.js`. The server now logs:
+
+- Node version,
+- environment,
+- `PORT`,
+- working directory,
+- server directory,
+- frontend/static root,
+- SQLite database path,
+- uploads path,
+- route registration,
+- SQLite initialization result.
+
+It also captures global startup failures with:
+
+- `UNCAUGHT EXCEPTION:`,
+- `UNHANDLED REJECTION:`,
+- `Could not initialize SQLite database:`.
+
+Common Render causes:
+
+- `Root Directory` is not set to `server`.
+- Node is still 24.x instead of 20.x.
+- Build cache reused old native `sqlite3` artifacts. Use `Manual Deploy > Clear build cache & deploy`.
+- `sqlite3` native binary was cached from an incompatible Linux image. The backend currently pins `sqlite3` to `5.1.7` to avoid the Render `GLIBC_2.38 not found` failure.
+- `DATABASE_PATH` points to a directory that does not exist or is not writable.
+- SQLite is running on ephemeral disk without a persistent volume.
+- Uploads are stored in `server/uploads`, which is also ephemeral unless a persistent disk is attached.
+
+Render provides the port through `process.env.PORT`; the backend listens on `0.0.0.0` with that value. Do not hardcode a fixed port in Render.
+
+If `sqlite3@5.1.7` still fails on Render, force a native rebuild in Render:
+
+```txt
+Build Command: npm install --build-from-source=sqlite3
+```
+
+Or set this environment variable:
+
+```txt
+npm_config_build_from_source=true
+```
+
+After changing any Node/sqlite setting, use `Manual Deploy > Clear build cache & deploy`, not a normal deploy.
+
 ## Performance Mode
 
 Open Settings > Rendimiento to reduce visual load on slower machines.
@@ -112,7 +176,8 @@ The app also respects the browser/system `prefers-reduced-motion` setting.
 
 Production runtime:
 
-- Use Node 20 LTS for the backend.
+- Recommended Node runtime: `20.x`.
+- Current SQLite package: `sqlite3` `5.1.7`.
 - `server/package.json` pins Render/Railway-compatible runtime selection with:
 
 ```json
@@ -121,7 +186,7 @@ Production runtime:
 }
 ```
 
-Do not deploy the backend on Node 24 for now. Render has shown `GLIBC_2.38 not found required by sqlite3` with Node.js 24.x/native `sqlite3` builds. The current `sqlite3` dependency is `^6.0.1`, whose package metadata requires `node >=20.17.0`, so Node 20 LTS is the safe target.
+Do not deploy the backend on Node 24 for now. Render has shown `GLIBC_2.38 not found required by sqlite3` with native `sqlite3` builds. The backend currently pins `sqlite3` to `5.1.7`, which is the Render-compatible target being used for this SQLite deployment.
 
 After changing Render from Node 24 to Node 20, run:
 
@@ -131,11 +196,12 @@ Manual Deploy > Clear build cache & deploy
 
 This forces Render to rebuild native dependencies like `sqlite3` for the Node 20 environment instead of reusing an incompatible cached build.
 
-Current audited dependency baseline:
+Current dependency baseline:
 
 - `bcrypt` `^6.0.0`
-- `sqlite3` `^6.0.1`
-- `npm audit --omit=dev`: 0 known vulnerabilities at the time of the local audit.
+- `sqlite3` `5.1.7`
+
+Local note: downgrading `sqlite3` to `5.1.7` can reintroduce audit warnings through older transitive build dependencies. Do not run `npm audit fix --force` blindly, because it may upgrade native SQLite packages back into the Render-incompatible path. For a stronger production setup, migrate the backend database layer to PostgreSQL.
 
 The backend allows requests from:
 

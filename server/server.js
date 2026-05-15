@@ -1,8 +1,19 @@
 const path = require("path");
 const fs = require("fs");
 
-const port = Number(process.env.PORT || 3000);
+process.on("uncaughtException", (error) => {
+  console.error("UNCAUGHT EXCEPTION:", error);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("UNHANDLED REJECTION:", reason);
+  process.exit(1);
+});
+
+const PORT = Number(process.env.PORT || 3000);
 const clientRoot = path.resolve(__dirname, "..");
+const uploadsRoot = path.join(__dirname, "uploads");
 const defaultAllowedOrigins = [
   "https://supratco.github.io",
   "http://localhost:3000",
@@ -17,6 +28,15 @@ const allowedOrigins = new Set(
     .filter(Boolean)
 );
 
+console.log("Starting RAT Ontological Archive server...");
+console.log("Node version:", process.version);
+console.log("Environment:", process.env.NODE_ENV || "development");
+console.log("PORT:", process.env.PORT || 3000);
+console.log("Working directory:", process.cwd());
+console.log("Server directory:", __dirname);
+console.log("Client root:", clientRoot);
+console.log("Uploads root:", uploadsRoot);
+
 function isAllowedOrigin(origin) {
   if (!origin) return true;
   if (allowedOrigins.has(origin)) return true;
@@ -27,12 +47,36 @@ function hasPackage(name) {
   try { require.resolve(name); return true; } catch (_error) { return false; }
 }
 
+function ensureDir(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+  console.log("Directory ready:", dir);
+}
+
+function ensureRuntimeDirectories() {
+  ensureDir(path.join(__dirname, "data"));
+  ensureDir(uploadsRoot);
+  ensureDir(path.join(uploadsRoot, "images"));
+  ensureDir(path.join(uploadsRoot, "videos"));
+  ensureDir(path.join(uploadsRoot, "avatars"));
+}
+
+function registerRoute(app, mountPath, modulePath, selectExport) {
+  console.log(`Registering route ${mountPath} -> ${modulePath}`);
+  const loaded = require(modulePath);
+  app.use(mountPath, selectExport ? selectExport(loaded) : loaded);
+}
+
 if (hasPackage("express") && hasPackage("sqlite3")) {
+  ensureRuntimeDirectories();
+  console.log("Express and sqlite3 packages detected. Starting Express + SQLite mode.");
   const express = require("express");
   const cors = require("cors");
-  const { init } = require("./database");
+  const { init, dbPath } = require("./database");
+  console.log("SQLite database path:", dbPath);
 
   const app = express();
+  app.get("/api/health", (_req, res) => res.json({ ok: true, mode: "express-sqlite", name: "RAT Ontological Archive" }));
+  console.log("Health endpoint registered: /api/health");
   app.use(cors({
     origin(origin, callback) {
       if (isAllowedOrigin(origin)) callback(null, true);
@@ -53,21 +97,23 @@ if (hasPackage("express") && hasPackage("sqlite3")) {
     };
     next();
   });
-  app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+  app.use("/uploads", express.static(uploadsRoot));
+  console.log("Static uploads route registered: /uploads");
 
-  app.use("/api/auth", require("./routes/auth.routes"));
-  app.use("/api/users", require("./routes/users.routes"));
-  app.use("/api/projects", require("./routes/projects.routes"));
-  app.use("/api/sections", require("./routes/sections.routes"));
-  app.use("/api/files", require("./routes/files.routes"));
-  app.use("/api/tags", require("./routes/tags.routes"));
-  app.use("/api/media", require("./routes/media.routes"));
-  app.use("/api/notifications", require("./routes/notifications.routes").router);
-  app.use("/api/forum", require("./routes/forum.routes"));
-  app.use("/api/access", require("./routes/access.routes"));
+  registerRoute(app, "/api/auth", "./routes/auth.routes");
+  registerRoute(app, "/api/users", "./routes/users.routes");
+  registerRoute(app, "/api/projects", "./routes/projects.routes");
+  registerRoute(app, "/api/sections", "./routes/sections.routes");
+  registerRoute(app, "/api/files", "./routes/files.routes");
+  registerRoute(app, "/api/tags", "./routes/tags.routes");
+  registerRoute(app, "/api/media", "./routes/media.routes");
+  registerRoute(app, "/api/notifications", "./routes/notifications.routes", (loaded) => loaded.router);
+  registerRoute(app, "/api/forum", "./routes/forum.routes");
+  registerRoute(app, "/api/access", "./routes/access.routes");
+  console.log("API routes registered.");
 
-  app.get("/api/health", (_req, res) => res.json({ ok: true, mode: "express-sqlite", name: "RAT Ontological Archive" }));
   app.use(express.static(clientRoot));
+  console.log("Static frontend route registered:", clientRoot);
   app.get("*", (_req, res) => res.sendFile(path.join(clientRoot, "index.html")));
   app.use((error, _req, res, _next) => {
     console.error(error);
@@ -79,13 +125,21 @@ if (hasPackage("express") && hasPackage("sqlite3")) {
     });
   });
 
+  console.log("Initializing SQLite database...");
   init().then(() => {
-    app.listen(port, () => console.log(`RAT Ontological Archive running at http://localhost:${port}`));
+    console.log("SQLite database initialized successfully.");
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`RAT Ontological Archive running at http://0.0.0.0:${PORT}`);
+    });
   }).catch((error) => {
-    console.error("Could not initialize database", error);
+    console.error("Could not initialize SQLite database:", error);
+    console.error("Database path was:", dbPath);
     process.exit(1);
   });
 } else {
+  ensureRuntimeDirectories();
+  console.log("Express or sqlite3 package missing. Starting fallback JSON server.");
   startFallbackServer();
 }
 
@@ -164,7 +218,7 @@ function startFallbackServer() {
 
   async function handleApi(req, res) {
     const db = load();
-    const url = new URL(req.url, `http://localhost:${port}`);
+    const url = new URL(req.url, `http://localhost:${PORT}`);
     const body = req.method === "GET" ? {} : await parseBody(req);
     const user = auth(req, db);
 
@@ -435,7 +489,7 @@ function startFallbackServer() {
     }
     if (origin && !isAllowedOrigin(origin)) return send(res, 403, { error: "CORS origin not allowed" });
     if (req.url.startsWith("/api/")) return handleApi(req, res).catch((error) => send(res, 500, { error: error.message }));
-    const url = new URL(req.url, `http://localhost:${port}`);
+    const url = new URL(req.url, `http://localhost:${PORT}`);
     let filePath = path.normalize(path.join(clientRoot, url.pathname === "/" ? "index.html" : url.pathname));
     if (!filePath.startsWith(clientRoot)) return send(res, 403, { error: "Forbidden" });
     if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) filePath = path.join(clientRoot, "index.html");
@@ -447,8 +501,8 @@ function startFallbackServer() {
     fs.createReadStream(filePath).pipe(res);
   });
 
-  server.listen(port, () => {
-    console.log(`RAT Ontological Archive fallback server at http://localhost:${port}`);
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`RAT Ontological Archive fallback server at http://0.0.0.0:${PORT}`);
     console.log("Install npm dependencies to enable Express + SQLite mode.");
   });
 }
