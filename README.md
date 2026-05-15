@@ -133,7 +133,7 @@ Important modules:
 - `js/editor.js`: WYSIWYG Docs editor tools.
 - `js/dynamicFields.js`: internal sections and custom fields.
 - `js/forum.js`: main forum/menu feed.
-- `js/contextMenu.js`: left-click contextual menus for projects, files, modules and forum posts.
+- `js/contextMenu.js`: right-click contextual menus for projects, files, modules and forum posts.
 - `js/i18n.js`: lightweight language dictionaries.
 
 ## Main Features
