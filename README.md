@@ -110,6 +110,27 @@ The app also respects the browser/system `prefers-reduced-motion` setting.
 - JSON Web Tokens for sessions
 - CORS
 
+Production runtime:
+
+- Use Node 20 LTS for the backend.
+- `server/package.json` pins Render/Railway-compatible runtime selection with:
+
+```json
+"engines": {
+  "node": "20.x"
+}
+```
+
+Do not deploy the backend on Node 24 for now. Render has shown `GLIBC_2.38 not found required by sqlite3` with Node.js 24.x/native `sqlite3` builds. The current `sqlite3` dependency is `^6.0.1`, whose package metadata requires `node >=20.17.0`, so Node 20 LTS is the safe target.
+
+After changing Render from Node 24 to Node 20, run:
+
+```txt
+Manual Deploy > Clear build cache & deploy
+```
+
+This forces Render to rebuild native dependencies like `sqlite3` for the Node 20 environment instead of reusing an incompatible cached build.
+
 Current audited dependency baseline:
 
 - `bcrypt` `^6.0.0`
@@ -167,14 +188,16 @@ Use this checklist when deploying the real web version with GitHub Pages plus an
    - `PORT`: usually provided by the host.
    - `DATABASE_PATH`: optional SQLite path if using a persistent disk.
 3. Make sure the backend URL is HTTPS, for example `https://mi-backend.onrender.com`.
-4. Open `https://mi-backend.onrender.com/api/health` and confirm it returns JSON with `ok: true`.
-5. If using SQLite, attach a persistent disk and point the database to it. Without persistent storage, `server/data/database.sqlite` can be reset by redeploys/restarts depending on the host.
-6. If using uploads, attach persistent storage for `server/uploads/`. Without it, avatars, banners, images and videos can disappear after deploys/restarts.
-7. Edit `js/config.js` and set `onlineBackend`/`API_URL` to the deployed backend URL.
-8. Commit and push the frontend to GitHub Pages.
-9. Open `https://supratco.github.io/RAT-Ontological-Archive/`.
-10. In Settings > Server, press `Probar conexion`.
-11. Test real flows from GitHub Pages:
+4. Configure the backend service to use Node 20 LTS, not Node 24.
+5. On Render, use `Manual Deploy > Clear build cache & deploy` after changing the Node version.
+6. Open `https://mi-backend.onrender.com/api/health` and confirm it returns JSON with `ok: true`.
+7. If using SQLite, attach a persistent disk and point the database to it. Without persistent storage, `server/data/database.sqlite` can be reset by redeploys/restarts depending on the host.
+8. If using uploads, attach persistent storage for `server/uploads/`. Without it, avatars, banners, images and videos can disappear after deploys/restarts.
+9. Edit `js/config.js` and set `onlineBackend`/`API_URL` to the deployed backend URL.
+10. Commit and push the frontend to GitHub Pages.
+11. Open `https://supratco.github.io/RAT-Ontological-Archive/`.
+12. In Settings > Server, press `Probar conexion`.
+13. Test real flows from GitHub Pages:
     - register/login,
     - create a project,
     - create and save a document,
