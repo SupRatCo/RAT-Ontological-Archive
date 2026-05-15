@@ -5,6 +5,15 @@
   const baseUrl = configuredApiUrl || fallbackApiUrl;
   const serverMode = Boolean(baseUrl);
   const tokenKey = "roa_server_token";
+  const recentErrors = [];
+
+  function recordError(path, detail) {
+    recentErrors.unshift(Object.assign({
+      path,
+      at: new Date().toISOString()
+    }, detail || {}));
+    recentErrors.splice(8);
+  }
 
   function token() {
     return localStorage.getItem(tokenKey) || "";
@@ -25,6 +34,7 @@
       response = await fetch(`${baseUrl}/api${path}`, init);
     } catch (error) {
       console.error("ROA API connection failed", { baseUrl, path, error });
+      recordError(path, { type: "connection", message: error.message || "Failed to fetch" });
       throw new Error("No se pudo conectar con el servidor. Revisa que el backend este activo y que API_URL/CORS sean correctos.");
     }
     const text = await response.text();
@@ -33,6 +43,7 @@
     catch (_error) { data = { error: text || response.statusText }; }
     if (!response.ok) {
       console.error("ROA API request failed", { baseUrl, path, status: response.status, data });
+      recordError(path, { type: "http", status: response.status, message: data.error || response.statusText || "Error de API." });
       if (response.status === 401) throw new Error("La sesion expiro o falta iniciar sesion.");
       if (response.status === 403) throw new Error("No tienes permisos para hacer esto.");
       if (response.status === 404) throw new Error("Ruta o registro no encontrado en el servidor.");
@@ -74,6 +85,7 @@
     token,
     setToken,
     request,
+    recentErrors,
     assetUrl,
     health: () => request("/health"),
     login,
@@ -117,8 +129,13 @@
     decideAccessRequest: (requestId, accept) => request(`/access/requests/${requestId}/decision`, json("POST", { accept })),
     getForumPosts: (params) => request(`/forum/posts${params ? `?${new URLSearchParams(params)}` : ""}`),
     createForumPost: (data) => request("/forum/posts", json("POST", data)),
+    updateForumPost: (postId, data) => request(`/forum/posts/${postId}`, json("PUT", data)),
+    deleteForumPost: (postId) => request(`/forum/posts/${postId}`, { method: "DELETE" }),
     getForumPost: (postId) => request(`/forum/posts/${postId}`),
+    getForumComments: (postId, params) => request(`/forum/posts/${postId}/comments${params ? `?${new URLSearchParams(params)}` : ""}`),
     createForumComment: (postId, data) => request(`/forum/posts/${postId}/comments`, json("POST", data)),
+    likeForumPost: (postId) => request(`/forum/posts/${postId}/like`, json("POST")),
+    unlikeForumPost: (postId) => request(`/forum/posts/${postId}/like`, { method: "DELETE" }),
     voteForumItem: (targetType, targetId, voteType) => request("/forum/vote", json("POST", { targetType, targetId, voteType })),
     saveForumPost: (postId) => request(`/forum/posts/${postId}/save`, json("POST"))
   };

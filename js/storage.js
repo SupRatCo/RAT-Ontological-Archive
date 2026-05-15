@@ -23,6 +23,15 @@
       language: "es-latam",
       autosave: true,
       uiFontScale: 100,
+      performanceMode: false,
+      visualQuality: "high",
+      performanceBackground: "animated",
+      reducedMotion: false,
+      disableGlows: false,
+      disableShadows: false,
+      disableTransitions: false,
+      disableParticles: false,
+      muteSounds: false,
       lastSavedAt: null
     };
   }

@@ -209,6 +209,9 @@
         case "open-forum":
           this.navigate("forum", { filter: el.dataset.filter || "recent" });
           break;
+        case "load-more-forum":
+          window.ROA.Forum.renderFeed(this.view.params || {}, true);
+          break;
         case "open-dashboard":
           this.navigate("dashboard");
           break;

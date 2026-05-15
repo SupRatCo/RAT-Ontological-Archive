@@ -120,6 +120,87 @@ body.animations-reduced *::after {
   transition-duration: 0.001ms !important;
 }
 
+body.performance-mode,
+body.quality-low,
+body.quality-ultra-low {
+  --glow: rgba(0, 0, 0, 0);
+  --shadow: rgba(0, 0, 0, 0.18);
+}
+
+body.static-background .star-layer,
+body.performance-mode .star-layer,
+body.quality-low .star-layer,
+body.quality-ultra-low .star-layer,
+body.reduced-motion .star-layer {
+  animation: none !important;
+}
+
+body.flat-background .star-layer,
+body.no-particles .star-layer,
+body.quality-ultra-low .star-layer {
+  background: var(--bg-deep) !important;
+}
+
+body.no-glow *,
+body.no-glow *::before,
+body.no-glow *::after,
+body.performance-mode *,
+body.performance-mode *::before,
+body.performance-mode *::after {
+  text-shadow: none !important;
+}
+
+body.no-glow .panel,
+body.no-glow .card-button,
+body.no-glow .modal,
+body.no-shadows .panel,
+body.no-shadows .card-button,
+body.no-shadows .modal,
+body.performance-mode .panel,
+body.performance-mode .card-button,
+body.performance-mode .modal,
+body.quality-ultra-low .panel,
+body.quality-ultra-low .card-button,
+body.quality-ultra-low .modal {
+  box-shadow: none !important;
+}
+
+body.quality-low .sidebar,
+body.quality-low .content-frame,
+body.quality-ultra-low .sidebar,
+body.quality-ultra-low .content-frame,
+body.performance-mode .sidebar,
+body.performance-mode .content-frame {
+  backdrop-filter: none !important;
+}
+
+body.no-transitions *,
+body.no-transitions *::before,
+body.no-transitions *::after,
+body.reduced-motion *,
+body.reduced-motion *::before,
+body.reduced-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.diagnostic-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
 @keyframes starDrift {
   from { background-position: 0 0, 0 0, 0 0, 0 0, center, center, center; }
   to { background-position: 180px 120px, -260px 190px, 330px -160px, -420px -320px, center, center, center; }

@@ -281,11 +281,36 @@ function startFallbackServer() {
       db.files = db.files.filter((file) => file.id !== fileMatch[1]); save(db); return send(res, 200, { ok: true });
     }
 
-    if (url.pathname === "/api/forum/posts" && req.method === "GET") return send(res, 200, { posts: db.posts.map((post) => {
-      const votes = (db.votes || []).filter((vote) => vote.targetType === "post" && vote.targetId === post.id);
-      const existing = user && votes.find((vote) => vote.userId === user.id);
-      return Object.assign({}, post, { author: db.users.find((u) => u.id === post.userId), commentsCount: db.comments.filter((c) => c.postId === post.id).length, upvotes: votes.filter((v) => v.voteType === "up").length - votes.filter((v) => v.voteType === "down").length, liked: !!(existing && existing.voteType === "up") });
-    }) });
+    if (url.pathname === "/api/forum/posts" && req.method === "GET") {
+      const filter = url.searchParams.get("filter") || "recent";
+      const q = String(url.searchParams.get("q") || "").trim().toLowerCase();
+      const limit = Math.min(Math.max(Number.parseInt(url.searchParams.get("limit"), 10) || 20, 1), 50);
+      const offset = Math.max(Number.parseInt(url.searchParams.get("offset"), 10) || 0, 0);
+      let posts = db.posts
+        .filter((post) => post.visibility !== "private" || (user && post.userId === user.id))
+        .filter((post) => filter !== "mine" || (user && post.userId === user.id))
+        .filter((post) => filter !== "saved" || (user && (post.savedBy || []).includes(user.id)))
+        .filter((post) => !q || `${post.title} ${post.content} ${post.summary || ""} ${(post.tags || []).join(" ")}`.toLowerCase().includes(q))
+        .map((post) => {
+          const votes = (db.votes || []).filter((vote) => vote.targetType === "post" && vote.targetId === post.id);
+          const existing = user && votes.find((vote) => vote.userId === user.id);
+          return Object.assign({}, post, {
+            author: db.users.find((u) => u.id === post.userId),
+            commentsCount: db.comments.filter((c) => c.postId === post.id).length,
+            upvotes: votes.filter((v) => v.voteType === "up").length - votes.filter((v) => v.voteType === "down").length,
+            likesCount: votes.filter((v) => v.voteType === "up").length - votes.filter((v) => v.voteType === "down").length,
+            liked: !!(existing && existing.voteType === "up"),
+            likedByCurrentUser: !!(existing && existing.voteType === "up"),
+            saved: !!(user && (post.savedBy || []).includes(user.id)),
+            sourceType: post.sourceFileId ? "document" : "normal"
+          });
+        });
+      if (filter === "popular") posts.sort((a, b) => b.upvotes - a.upvotes || String(b.createdAt).localeCompare(String(a.createdAt)));
+      else if (filter === "commented") posts.sort((a, b) => b.commentsCount - a.commentsCount || String(b.createdAt).localeCompare(String(a.createdAt)));
+      else posts.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      const slice = posts.slice(offset, offset + limit);
+      return send(res, 200, { posts: slice, page: { limit, offset, nextOffset: offset + slice.length, hasMore: offset + slice.length < posts.length } });
+    }
     if (url.pathname === "/api/forum/posts" && req.method === "POST") {
       if (!String(body.title || "").trim()) return send(res, 400, { error: "El titulo no puede estar vacio." });
       if (!String(body.content || "").trim()) return send(res, 400, { error: "El contenido no puede estar vacio." });
@@ -295,11 +320,45 @@ function startFallbackServer() {
     const postMatch = url.pathname.match(/^\/api\/forum\/posts\/([^/]+)$/);
     if (postMatch && req.method === "GET") {
       const post = db.posts.find((item) => item.id === postMatch[1]);
+      if (!post) return send(res, 404, { error: "Post not found" });
       const votes = (db.votes || []).filter((vote) => vote.targetType === "post" && vote.targetId === post.id);
       const existing = user && votes.find((vote) => vote.userId === user.id);
       return send(res, 200, { post: Object.assign({}, post, { author: db.users.find((u) => u.id === post.userId), upvotes: votes.filter((v) => v.voteType === "up").length - votes.filter((v) => v.voteType === "down").length, liked: !!(existing && existing.voteType === "up") }), comments: db.comments.filter((comment) => comment.postId === postMatch[1]) });
     }
+    if (postMatch && req.method === "PUT") {
+      const post = db.posts.find((item) => item.id === postMatch[1]);
+      if (!post) return send(res, 404, { error: "Post not found" });
+      if (post.userId !== user.id) return send(res, 403, { error: "Solo puedes editar tus publicaciones." });
+      Object.assign(post, {
+        title: String(body.title || post.title).trim(),
+        content: String(body.content || post.content).trim(),
+        summary: body.summary || post.summary || "",
+        tags: Array.isArray(body.tags) ? body.tags : post.tags || [],
+        visibility: body.visibility || post.visibility || "public",
+        updatedAt: now()
+      });
+      save(db); return send(res, 200, { post });
+    }
+    if (postMatch && req.method === "DELETE") {
+      const post = db.posts.find((item) => item.id === postMatch[1]);
+      if (!post) return send(res, 404, { error: "Post not found" });
+      if (post.userId !== user.id) return send(res, 403, { error: "Solo puedes borrar tus publicaciones." });
+      db.posts = db.posts.filter((item) => item.id !== post.id);
+      db.comments = db.comments.filter((comment) => comment.postId !== post.id);
+      db.votes = (db.votes || []).filter((vote) => !(vote.targetType === "post" && vote.targetId === post.id));
+      save(db); return send(res, 200, { ok: true });
+    }
     const commentMatch = url.pathname.match(/^\/api\/forum\/posts\/([^/]+)\/comments$/);
+    if (commentMatch && req.method === "GET") {
+      const limit = Math.min(Math.max(Number.parseInt(url.searchParams.get("limit"), 10) || 50, 1), 100);
+      const offset = Math.max(Number.parseInt(url.searchParams.get("offset"), 10) || 0, 0);
+      const comments = db.comments.filter((comment) => comment.postId === commentMatch[1]).map((comment) => {
+        const author = db.users.find((item) => item.id === comment.userId) || {};
+        return Object.assign({}, comment, { username: author.username || comment.username || "Usuario", avatar_url: author.avatar_url || "" });
+      });
+      const slice = comments.slice(offset, offset + limit);
+      return send(res, 200, { comments: slice, page: { limit, offset, nextOffset: offset + slice.length, hasMore: offset + slice.length < comments.length } });
+    }
     if (commentMatch && req.method === "POST") {
       if (!String(body.content || "").trim()) return send(res, 400, { error: "El comentario no puede estar vacio." });
       const comment = { id: uid("comment"), postId: commentMatch[1], userId: user.id, username: user.username, content: String(body.content).trim(), parentCommentId: body.parentCommentId || null, createdAt: now(), updatedAt: now() };
@@ -318,7 +377,27 @@ function startFallbackServer() {
       save(db);
       return send(res, 200, { ok: true, liked, upvotes: votes.filter((v) => v.voteType === "up").length - votes.filter((v) => v.voteType === "down").length });
     }
-    if (/^\/api\/forum\/posts\/[^/]+\/save$/.test(url.pathname)) return send(res, 200, { saved: true });
+    const likeMatch = url.pathname.match(/^\/api\/forum\/posts\/([^/]+)\/like$/);
+    if (likeMatch && (req.method === "POST" || req.method === "DELETE")) {
+      db.votes = db.votes || [];
+      const existing = db.votes.find((vote) => vote.userId === user.id && vote.targetType === "post" && vote.targetId === likeMatch[1]);
+      let liked = false;
+      if (req.method === "DELETE") db.votes = db.votes.filter((vote) => vote !== existing);
+      else if (existing) db.votes = db.votes.filter((vote) => vote !== existing);
+      else { db.votes.push({ id: uid("vote"), userId: user.id, targetType: "post", targetId: likeMatch[1], voteType: "up", createdAt: now() }); liked = true; }
+      const votes = db.votes.filter((vote) => vote.targetType === "post" && vote.targetId === likeMatch[1]);
+      save(db);
+      return send(res, 200, { ok: true, liked, upvotes: votes.filter((v) => v.voteType === "up").length });
+    }
+    const saveMatch = url.pathname.match(/^\/api\/forum\/posts\/([^/]+)\/save$/);
+    if (saveMatch && req.method === "POST") {
+      const post = db.posts.find((item) => item.id === saveMatch[1]);
+      if (!post) return send(res, 404, { error: "Post not found" });
+      post.savedBy = post.savedBy || [];
+      if (post.savedBy.includes(user.id)) post.savedBy = post.savedBy.filter((id) => id !== user.id);
+      else post.savedBy.push(user.id);
+      save(db); return send(res, 200, { saved: post.savedBy.includes(user.id) });
+    }
 
     send(res, 404, { error: "Not found" });
   }

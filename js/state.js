@@ -55,6 +55,8 @@
     startAutosave() {
       clearInterval(this.autosaveTimer);
       this.autosaveTimer = setInterval(async () => {
+        const settings = window.ROA.App && window.ROA.App.data ? window.ROA.App.data.settings : {};
+        if (settings.autosave === false) return;
         if (this.pendingChanges && this.pendingFileId && window.ROA.Files) {
           const ok = await window.ROA.Files.saveFile(this.pendingFileId, true);
           if (ok) {

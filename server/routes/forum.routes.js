@@ -37,18 +37,109 @@ async function postOut(row, userId) {
   };
 }
 
+function parseLimitOffset(query) {
+  return {
+    limit: Math.min(Math.max(Number.parseInt(query.limit, 10) || 20, 1), 50),
+    offset: Math.max(Number.parseInt(query.offset, 10) || 0, 0)
+  };
+}
+
+function postFromJoinedRow(row) {
+  const settings = JSON.parse(row.author_settings_json || "{}");
+  return {
+    id: row.id,
+    userId: row.user_id,
+    author: {
+      id: row.author_id,
+      username: row.author_username,
+      avatar_url: row.author_avatar_url || "",
+      banner: settings.banner || "",
+      bio: settings.bio || "",
+      accent: settings.accent || ""
+    },
+    projectId: row.project_id,
+    sourceFileId: row.source_file_id,
+    sourceType: row.source_file_id ? "document" : "normal",
+    title: row.title,
+    content: row.content,
+    contentSnapshot: row.content_snapshot || row.content,
+    summary: row.summary,
+    tags: JSON.parse(row.tags_json || "[]"),
+    visibility: row.visibility,
+    coverMediaId: row.cover_media_id,
+    upvotes: Number(row.likes_count || 0),
+    likesCount: Number(row.likes_count || 0),
+    commentsCount: Number(row.comments_count || 0),
+    liked: !!row.liked_by_current_user,
+    likedByCurrentUser: !!row.liked_by_current_user,
+    saved: !!row.saved_by_current_user,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
 router.get("/posts", optionalAuth, async (req, res, next) => {
   try {
     const filter = req.query.filter || "recent";
-    const q = String(req.query.q || "").toLowerCase();
-    let rows = await all("SELECT * FROM forum_posts WHERE visibility = 'public' ORDER BY created_at DESC");
-    if (q) rows = rows.filter((row) => `${row.title} ${row.content} ${row.summary} ${row.tags_json}`.toLowerCase().includes(q));
-    const posts = await Promise.all(rows.map((row) => postOut(row, req.user && req.user.id)));
-    if (filter === "popular") posts.sort((a, b) => b.upvotes - a.upvotes);
-    if (filter === "commented") posts.sort((a, b) => b.commentsCount - a.commentsCount);
-    if (filter === "saved" && req.user) return res.json({ posts: posts.filter((p) => p.saved) });
-    if (filter === "mine" && req.user) return res.json({ posts: posts.filter((p) => p.userId === req.user.id) });
-    res.json({ posts });
+    const q = String(req.query.q || "").trim().toLowerCase();
+    const userId = req.user && req.user.id ? req.user.id : "";
+    const { limit, offset } = parseLimitOffset(req.query);
+    const where = ["(p.visibility = 'public' OR p.user_id = ?)"];
+    const params = [userId];
+
+    if (filter === "saved" && userId) where.push("p.saved_by_json LIKE ?");
+    if (filter === "saved" && userId) params.push(`%"${userId}"%`);
+    if (filter === "mine" && userId) {
+      where.length = 0;
+      where.push("p.user_id = ?");
+      params.length = 0;
+      params.push(userId);
+    }
+    if (q) {
+      where.push("LOWER(p.title || ' ' || p.content || ' ' || COALESCE(p.summary, '') || ' ' || COALESCE(p.tags_json, '')) LIKE ?");
+      params.push(`%${q}%`);
+    }
+
+    let order = "p.created_at DESC";
+    if (filter === "popular") order = "likes_count DESC, p.created_at DESC";
+    if (filter === "commented") order = "comments_count DESC, p.created_at DESC";
+
+    const rows = await all(`
+      SELECT
+        p.*,
+        u.id AS author_id,
+        u.username AS author_username,
+        u.avatar_url AS author_avatar_url,
+        u.settings_json AS author_settings_json,
+        COALESCE(vote_counts.likes_count, 0) AS likes_count,
+        COALESCE(comment_counts.comments_count, 0) AS comments_count,
+        CASE WHEN liked.id IS NULL THEN 0 ELSE 1 END AS liked_by_current_user,
+        CASE WHEN p.saved_by_json LIKE ? THEN 1 ELSE 0 END AS saved_by_current_user
+      FROM forum_posts p
+      JOIN users u ON u.id = p.user_id
+      LEFT JOIN (
+        SELECT target_id, SUM(CASE WHEN vote_type = 'up' THEN 1 WHEN vote_type = 'down' THEN -1 ELSE 0 END) AS likes_count
+        FROM forum_votes
+        WHERE target_type = 'post'
+        GROUP BY target_id
+      ) vote_counts ON vote_counts.target_id = p.id
+      LEFT JOIN (
+        SELECT post_id, COUNT(*) AS comments_count
+        FROM forum_comments
+        GROUP BY post_id
+      ) comment_counts ON comment_counts.post_id = p.id
+      LEFT JOIN forum_votes liked ON liked.target_type = 'post' AND liked.target_id = p.id AND liked.user_id = ? AND liked.vote_type = 'up'
+      WHERE ${where.join(" AND ")}
+      ORDER BY ${order}
+      LIMIT ? OFFSET ?
+    `, [`%"${userId}"%`, userId].concat(params, [limit + 1, offset]));
+
+    const hasMore = rows.length > limit;
+    const pageRows = rows.slice(0, limit);
+    res.json({
+      posts: pageRows.map(postFromJoinedRow),
+      page: { limit, offset, nextOffset: offset + pageRows.length, hasMore }
+    });
   } catch (error) { next(error); }
 });
 
@@ -66,12 +157,57 @@ router.post("/posts", requireAuth, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.put("/posts/:postId", requireAuth, async (req, res, next) => {
+  try {
+    const row = await get("SELECT * FROM forum_posts WHERE id = ?", [req.params.postId]);
+    if (!row) return res.status(404).json({ error: "Post not found" });
+    if (row.user_id !== req.user.id) return res.status(403).json({ error: "Solo puedes editar tus publicaciones." });
+    const title = String(req.body.title || row.title).trim();
+    const content = String(req.body.content || row.content).trim();
+    if (!title) return res.status(400).json({ error: "El titulo no puede estar vacio." });
+    if (!content) return res.status(400).json({ error: "El contenido no puede estar vacio." });
+    await run("UPDATE forum_posts SET title = ?, content = ?, summary = ?, tags_json = ?, visibility = ?, updated_at = ? WHERE id = ?", [
+      title, content, req.body.summary || "", JSON.stringify(req.body.tags || []), req.body.visibility || row.visibility, now(), row.id
+    ]);
+    res.json({ post: await postOut(await get("SELECT * FROM forum_posts WHERE id = ?", [row.id]), req.user.id) });
+  } catch (error) { next(error); }
+});
+
+router.delete("/posts/:postId", requireAuth, async (req, res, next) => {
+  try {
+    const row = await get("SELECT * FROM forum_posts WHERE id = ?", [req.params.postId]);
+    if (!row) return res.status(404).json({ error: "Post not found" });
+    if (row.user_id !== req.user.id) return res.status(403).json({ error: "Solo puedes borrar tus publicaciones." });
+    await run("DELETE FROM forum_posts WHERE id = ?", [row.id]);
+    await run("DELETE FROM forum_votes WHERE target_type = 'post' AND target_id = ?", [row.id]);
+    res.json({ ok: true });
+  } catch (error) { next(error); }
+});
+
 router.get("/posts/:postId", optionalAuth, async (req, res, next) => {
   try {
     const row = await get("SELECT * FROM forum_posts WHERE id = ?", [req.params.postId]);
     if (!row) return res.status(404).json({ error: "Post not found" });
     const comments = await all("SELECT c.*, u.username, u.avatar_url, u.settings_json FROM forum_comments c JOIN users u ON u.id = c.user_id WHERE c.post_id = ? ORDER BY c.created_at", [req.params.postId]);
     res.json({ post: await postOut(row, req.user && req.user.id), comments });
+  } catch (error) { next(error); }
+});
+
+router.get("/posts/:postId/comments", optionalAuth, async (req, res, next) => {
+  try {
+    const post = await get("SELECT id FROM forum_posts WHERE id = ?", [req.params.postId]);
+    if (!post) return res.status(404).json({ error: "Post not found" });
+    const { limit, offset } = parseLimitOffset(req.query);
+    const comments = await all(`
+      SELECT c.*, u.username, u.avatar_url, u.settings_json
+      FROM forum_comments c
+      JOIN users u ON u.id = c.user_id
+      WHERE c.post_id = ?
+      ORDER BY c.created_at
+      LIMIT ? OFFSET ?
+    `, [req.params.postId, limit + 1, offset]);
+    const hasMore = comments.length > limit;
+    res.json({ comments: comments.slice(0, limit), page: { limit, offset, nextOffset: offset + Math.min(comments.length, limit), hasMore } });
   } catch (error) { next(error); }
 });
 
@@ -92,15 +228,17 @@ router.post("/posts/:postId/comments", requireAuth, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.post("/vote", requireAuth, async (req, res, next) => {
+async function applyVote(req, res, next, forced) {
   try {
     const targetType = req.body.targetType === "comment" ? "comment" : "post";
     const voteType = req.body.voteType === "down" ? "down" : "up";
-    const targetId = String(req.body.targetId || "");
+    const targetId = String(req.body.targetId || req.params.postId || "");
     if (!targetId) return res.status(400).json({ error: "Falta el objetivo del voto." });
     const existing = await get("SELECT * FROM forum_votes WHERE user_id = ? AND target_type = ? AND target_id = ?", [req.user.id, targetType, targetId]);
     let liked = false;
-    if (existing && existing.vote_type === voteType) {
+    if (forced === "delete") {
+      if (existing) await run("DELETE FROM forum_votes WHERE id = ?", [existing.id]);
+    } else if (existing && existing.vote_type === voteType) {
       await run("DELETE FROM forum_votes WHERE id = ?", [existing.id]);
     } else if (existing) {
       await run("UPDATE forum_votes SET vote_type = ?, created_at = ? WHERE id = ?", [voteType, now(), existing.id]);
@@ -117,6 +255,20 @@ router.post("/vote", requireAuth, async (req, res, next) => {
     const upvotes = rows.filter((v) => v.vote_type === "up").length - rows.filter((v) => v.vote_type === "down").length;
     res.json({ ok: true, liked, upvotes });
   } catch (error) { next(error); }
+}
+
+router.post("/vote", requireAuth, applyVote);
+router.post("/posts/:postId/like", requireAuth, (req, res, next) => {
+  req.body.targetType = "post";
+  req.body.targetId = req.params.postId;
+  req.body.voteType = "up";
+  return applyVote(req, res, next);
+});
+router.delete("/posts/:postId/like", requireAuth, (req, res, next) => {
+  req.body.targetType = "post";
+  req.body.targetId = req.params.postId;
+  req.body.voteType = "up";
+  return applyVote(req, res, next, "delete");
 });
 
 router.post("/posts/:postId/save", requireAuth, async (req, res, next) => {

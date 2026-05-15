@@ -206,6 +206,13 @@ async function init() {
   )`);
   await ensureColumn("forum_posts", "source_file_id", "TEXT");
   await ensureColumn("forum_posts", "content_snapshot", "TEXT");
+  await run("CREATE INDEX IF NOT EXISTS idx_forum_posts_created_at ON forum_posts(created_at)");
+  await run("CREATE INDEX IF NOT EXISTS idx_forum_posts_visibility ON forum_posts(visibility)");
+  await run("CREATE INDEX IF NOT EXISTS idx_forum_posts_user_id ON forum_posts(user_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_forum_comments_post_id ON forum_comments(post_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_forum_comments_parent ON forum_comments(parent_comment_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_forum_votes_target ON forum_votes(target_type, target_id)");
+  await run("CREATE INDEX IF NOT EXISTS idx_forum_votes_user ON forum_votes(user_id)");
 }
 
 async function ensureColumn(table, column, definition) {

@@ -35,7 +35,7 @@
       <section class="gallery-grid">
         ${images.map((image) => `
           <article class="archive-card gallery-card">
-            ${image.kind === "video" ? `<div class="video-thumb">VIDEO</div>` : `<img src="${UI.escape(image.src)}" alt="${UI.escape(image.name)}">`}
+            ${image.kind === "video" ? `<div class="video-thumb">VIDEO</div>` : `<img loading="lazy" decoding="async" src="${UI.escape(image.src)}" alt="${UI.escape(image.name)}">`}
             <strong>${UI.escape(image.name)}</strong>
             <span>${UI.escape(image.description || "Sin descripcion.")}</span>
             <span class="meta">${UI.escape(image.mimeType || image.kind || "media")} / ${Math.round((image.size || 0) / 1024)} KB</span>

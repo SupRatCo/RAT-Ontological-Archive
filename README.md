@@ -72,6 +72,21 @@ http://localhost:3000/api/health
 
 The fallback server returns `mode: "fallback-json"` and stores temporary development data in `server/data/fallback-db.json`.
 
+## Performance Mode
+
+Open Settings > Rendimiento to reduce visual load on slower machines.
+
+Available controls:
+
+- Modo rendimiento: reduces glow, shadows, blur and animated background work.
+- Calidad visual: Alta, Media, Baja and Ultra baja.
+- Fondo: Animado, Estatico or Color plano.
+- Toggles for reduced motion, glows, large shadows, transitions, particles and UI sounds.
+
+These preferences are saved with the current user and applied as global body classes such as `performance-mode`, `quality-low`, `quality-ultra-low`, `reduced-motion`, `no-glow`, `no-particles` and `flat-background`.
+
+The app also respects the browser/system `prefers-reduced-motion` setting.
+
 ## Server Stack
 
 - Node.js
@@ -103,6 +118,8 @@ server/data/database.sqlite
 ```
 
 Main tables include users, projects, project_members, sections, files, file_fields, tags, media, notifications, access_requests, forum_posts, forum_comments and forum_votes.
+
+Forum tables use indexes on post creation date, visibility, author, comments and votes. Likes are stored server-side with one vote per user/target, so counters persist after reload and are shared across accounts.
 
 ## Frontend Structure
 
@@ -138,7 +155,35 @@ Important modules:
 - Forum posts, document posts, comments, direct replies, toggle likes, saved posts, filters, search and public profiles.
 - Profile customization with avatar, banner, bio, links and accent color.
 - Settings split into tabs: General, Account, Appearance, Audio, Video, Language, Data, Projects, Accessibility and Server.
+- Settings include Rendimiento and Server diagnostics.
 - Language selector for Spanish LATAM, Spanish Spain, English and Portuguese.
+
+## Server Diagnostics
+
+Open Settings > Server and press `Probar conexion`.
+
+The panel shows:
+
+- current backend URL,
+- connected/disconnected state,
+- approximate latency,
+- server mode,
+- recent API errors captured by `js/api.js`.
+
+If the backend is off or `API_URL` is wrong, the app should show a clear message instead of only `Failed to Fetch`.
+
+## Test Multi-User Forum
+
+To verify that the forum is shared through the backend:
+
+1. Start the backend.
+2. Create User A and publish a public post.
+3. Log out and create/log in as User B.
+4. Open the forum. User B should see User A's post.
+5. User B comments and likes it.
+6. Log back in as User A. The comment and like count should still be visible.
+
+The feed uses `/api/forum/posts` with pagination and the `Cargar mas` button. Comments and likes are stored on the server, not as global forum data in localStorage.
 
 ## Text Editor Notes
 

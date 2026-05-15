@@ -1,6 +1,11 @@
 (function () {
   const { UI, Storage } = window.ROA;
   let lastFilters = {};
+  const PAGE_SIZE = 18;
+  let feedCache = [];
+  let nextOffset = 0;
+  let hasMorePosts = false;
+  let loadingFeed = false;
 
   function safeHtml(html) {
     const template = document.createElement("template");
@@ -28,23 +33,40 @@
     return `<span class="forum-avatar" style="${src ? `background-image:url('${UI.escape(src)}')` : ""}">${src ? "" : UI.escape(name[0] || "A")}</span>`;
   }
 
-  async function getPosts(filters) {
+  async function getPosts(filters, append) {
     if (window.ROA.Api.serverMode) {
       try {
-        const data = await window.ROA.Api.getForumPosts(filters);
-        return data.posts || [];
+        const params = Object.assign({}, filters || {}, { limit: PAGE_SIZE, offset: append ? nextOffset : 0 });
+        const data = await window.ROA.Api.getForumPosts(params);
+        hasMorePosts = !!(data.page && data.page.hasMore);
+        nextOffset = data.page ? data.page.nextOffset : (append ? nextOffset + (data.posts || []).length : (data.posts || []).length);
+        if (append) feedCache = feedCache.concat(data.posts || []);
+        else feedCache = data.posts || [];
+        return feedCache;
       } catch (error) {
         UI.toast(error.message || "No se pudo cargar el foro.");
+        return [];
       }
     }
     const q = String(filters && filters.q || "").toLowerCase();
-    return localPosts().filter((post) => !q || `${post.title} ${post.content} ${post.summary} ${(post.tags || []).join(" ")}`.toLowerCase().includes(q));
+    feedCache = localPosts().filter((post) => !q || `${post.title} ${post.content} ${post.summary} ${(post.tags || []).join(" ")}`.toLowerCase().includes(q));
+    hasMorePosts = false;
+    return feedCache;
   }
 
-  async function renderFeed(filters) {
+  async function renderFeed(filters, append) {
+    if (loadingFeed) return;
+    loadingFeed = true;
     lastFilters = Object.assign({}, filters || {});
     const user = window.ROA.Auth.currentUser();
-    const posts = await getPosts(lastFilters);
+    const previousLength = append ? feedCache.length : 0;
+    const posts = await getPosts(lastFilters, append);
+    loadingFeed = false;
+    if (append) {
+      appendPosts(posts.slice(previousLength), user);
+      updateLoadMore();
+      return;
+    }
     document.querySelector("#mainView").innerHTML = `
       <section class="forum-shell">
         <header class="forum-hero compact-hero">
@@ -67,10 +89,23 @@
         <section class="forum-feed">
           ${posts.map((post) => renderPostCard(post, user)).join("") || `<article class="empty-state"><div><h2>Sin publicaciones</h2><p>Crea un post o publica un documento.</p></div></article>`}
         </section>
+        <div class="forum-load-more">${hasMorePosts ? `<button class="ghost-action" type="button" data-action="load-more-forum">Cargar mas</button>` : ""}</div>
       </section>
     `;
     const search = document.querySelector("#forumSearch");
-    search.addEventListener("input", debounce(() => renderFeed(Object.assign({}, lastFilters, { q: search.value })), 280));
+    if (search) search.addEventListener("input", debounce(() => renderFeed(Object.assign({}, lastFilters, { q: search.value })), 320));
+  }
+
+  function appendPosts(posts, user) {
+    const feed = document.querySelector(".forum-feed");
+    if (!feed || !posts.length) return;
+    const html = posts.map((post) => renderPostCard(post, user)).join("");
+    feed.insertAdjacentHTML("beforeend", html);
+  }
+
+  function updateLoadMore() {
+    const node = document.querySelector(".forum-load-more");
+    if (node) node.innerHTML = hasMorePosts ? `<button class="ghost-action" type="button" data-action="load-more-forum">Cargar mas</button>` : "";
   }
 
   function debounce(fn, ms) {
@@ -240,15 +275,34 @@
   }
 
   async function vote(targetType, targetId, voteType) {
-    if (window.ROA.Api.serverMode) await window.ROA.Api.voteForumItem(targetType, targetId, voteType);
+    let result = { liked: true, upvotes: 0 };
+    if (window.ROA.Api.serverMode) result = await window.ROA.Api.voteForumItem(targetType, targetId, voteType);
     else UI.toast("Like registrado.");
-    renderFeed(lastFilters);
+    updateVoteButtons(targetType, targetId, result);
   }
 
   async function savePost(postId) {
-    if (window.ROA.Api.serverMode) await window.ROA.Api.saveForumPost(postId);
+    let result = { saved: true };
+    if (window.ROA.Api.serverMode) result = await window.ROA.Api.saveForumPost(postId);
     else UI.toast("Publicacion guardada.");
-    renderFeed(lastFilters);
+    document.querySelectorAll(`[data-action="save-forum-post"][data-post-id="${CSS.escape(postId)}"]`).forEach((button) => {
+      button.textContent = result.saved ? "Guardado" : "Guardar";
+      button.classList.toggle("active", !!result.saved);
+    });
+  }
+
+  function updateVoteButtons(targetType, targetId, result) {
+    const label = targetType === "post" ? `Like ${result.upvotes || 0}` : "Like";
+    document.querySelectorAll(`[data-action="vote-forum"][data-target-type="${targetType}"][data-target-id="${CSS.escape(targetId)}"]`).forEach((button) => {
+      button.classList.toggle("liked", !!result.liked);
+      if (targetType === "post") button.textContent = label;
+    });
+    const cached = feedCache.find((post) => post.id === targetId);
+    if (cached) {
+      cached.liked = !!result.liked;
+      cached.upvotes = result.upvotes || 0;
+      cached.likesCount = result.upvotes || 0;
+    }
   }
 
   async function openPublicProfile(userId) {
