@@ -60,9 +60,10 @@ El frontend carga en navegador sin errores criticos de consola en la pantalla in
 
 ### Dependencias
 
-- `npm audit` encontro 8 vulnerabilidades iniciales por `sqlite3@5.x`, `bcrypt@5.x` y dependencias transitivas antiguas.
-  - Corregido: `sqlite3` actualizado a `^6.0.1` y `bcrypt` a `^6.0.0`.
-  - Resultado actual: `npm audit --omit=dev` reporta 0 vulnerabilidades.
+- `bcrypt` esta en `^6.0.0`.
+- `sqlite3` esta fijado en `5.1.7` para compatibilidad con Render/Node 20 en modo local SQLite.
+- Se agrego `pg` para PostgreSQL de produccion.
+- No usar `npm audit fix --force` a ciegas porque puede volver a cambiar dependencias nativas de SQLite y romper Render. La solucion de produccion recomendada es `DATABASE_URL` + PostgreSQL.
 
 ### Despliegue
 
@@ -106,7 +107,9 @@ Pruebas realizadas contra servidor Express + SQLite:
 
 ## Base de Datos
 
-Base actual: SQLite.
+Base local/desarrollo: SQLite.
+
+Base produccion recomendada: PostgreSQL. El backend usa PostgreSQL automaticamente si `DATABASE_URL` esta configurada; si no, usa SQLite local.
 
 Tablas presentes:
 
@@ -140,6 +143,26 @@ Indices agregados/verificados:
 
 ## Limitaciones Reales
 
+### PostgreSQL en produccion
+
+Se agrego adaptador PostgreSQL con `pg`.
+
+Variables necesarias:
+
+```txt
+DATABASE_URL=postgresql://...
+NODE_ENV=production
+JWT_SECRET=secreto-estable
+```
+
+El schema PostgreSQL se crea al iniciar el backend y tambien queda documentado en:
+
+```txt
+server/db/schema.sql
+```
+
+No se pudo probar contra una instancia real de Supabase/PostgreSQL desde este entorno porque no se proporciono `DATABASE_URL`. Se verifico que el modo SQLite local sigue arrancando y que la capa de base mantiene el contrato `run/get/all`.
+
 ### SQLite en produccion
 
 SQLite funciona para desarrollo, demo y hosting persistente con disco estable. No es ideal para produccion multiusuario grande.
@@ -147,30 +170,45 @@ SQLite funciona para desarrollo, demo y hosting persistente con disco estable. N
 Para produccion real en Render/Railway/Fly:
 
 - usar disco persistente si mantienes SQLite,
-- o migrar a PostgreSQL/Supabase/Neon.
-
-Actualmente no hay adaptador PostgreSQL implementado.
+- o configurar `DATABASE_URL` y usar PostgreSQL/Supabase/Neon.
 
 ### Uploads en hosting
 
-Los archivos se guardan en:
+En modo local, los archivos se guardan en:
 
 ```txt
 server/uploads/
 ```
 
-En servicios con filesystem efimero, los uploads pueden perderse al reiniciar/deployar. Para produccion real se recomienda:
+En servicios con filesystem efimero, los uploads pueden perderse al reiniciar/deployar.
+
+Se agrego modulo de storage externo:
+
+```txt
+server/storage.js
+```
+
+Si estan configuradas estas variables, el backend usa Supabase Storage:
+
+```txt
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_STORAGE_BUCKET
+STORAGE_PROVIDER=supabase
+```
+
+Si faltan, el sistema cae a `server/uploads/` para desarrollo local.
+
+Opciones recomendadas:
 
 - Supabase Storage,
 - Cloudinary,
 - S3/R2,
 - o volumen persistente del proveedor.
 
-Actualmente no hay integracion externa de storage implementada.
-
 ### Banner de perfil
 
-El avatar se sube al servidor como archivo. El banner se guarda como valor en `settings_json`; si se usa base64 grande, puede inflar la base de datos. Recomendado migrarlo al mismo sistema de uploads/storage que avatar.
+El avatar y el banner ahora se suben como archivos mediante el backend. En produccion deben ir a Supabase Storage; en local caen a `server/uploads/avatars`.
 
 ### Respuesta estandar
 
@@ -195,11 +233,17 @@ Backend externo:
 - Variables recomendadas:
 
 ```txt
-PORT=3000
 JWT_SECRET=un-secreto-largo-y-real
 CORS_ORIGINS=https://supratco.github.io,http://localhost:3000
-DATABASE_PATH=./data/database.sqlite
+DATABASE_URL=postgresql://...
+NODE_ENV=production
+SUPABASE_URL=https://...
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_STORAGE_BUCKET=roa-media
+STORAGE_PROVIDER=supabase
 ```
+
+`DATABASE_PATH=./data/database.sqlite` queda solo como opcion local/desarrollo si no se configura `DATABASE_URL`.
 
 Frontend:
 

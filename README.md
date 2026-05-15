@@ -9,6 +9,7 @@ RAT Ontological Archive can run with a static frontend and an external backend:
 - GitHub Pages: hosts only the frontend.
 - Render, Railway, Fly.io or a VPS: hosts the Node/Express backend.
 - PostgreSQL providers such as Supabase, Neon or Railway Postgres: recommended database for multi-user production.
+- Supabase Storage, Cloudinary, S3 or R2: recommended storage for avatars, banners, images and videos.
 
 The current frontend is kept in the project root for GitHub Pages compatibility. A matching `client/js/config.js` file is also included as a clean reference if the project is later moved into a dedicated `client/` folder.
 
@@ -75,7 +76,7 @@ http://localhost:3000
 
 The server serves the frontend and exposes the API under `/api`.
 
-If dependencies are not installed, `node server.js` can start a limited JSON fallback server for local development, but the intended production/local mode is Express + SQLite.
+If dependencies are not installed, `node server.js` can start a limited JSON fallback server for local development. The intended local mode is Express + SQLite; the intended production mode is Express + PostgreSQL.
 
 For a quick health check:
 
@@ -84,6 +85,61 @@ http://localhost:3000/api/health
 ```
 
 The fallback server returns `mode: "fallback-json"` and stores temporary development data in `server/data/fallback-db.json`.
+
+## Production Database And Storage
+
+The backend now chooses its database automatically:
+
+```js
+if (process.env.DATABASE_URL) {
+  // PostgreSQL production mode
+} else {
+  // SQLite local/development mode
+}
+```
+
+Recommended production setup:
+
+```txt
+Frontend: GitHub Pages
+Backend: Render Node/Express
+Database: Supabase PostgreSQL
+Storage: Supabase Storage
+```
+
+Render environment variables for production:
+
+```txt
+NODE_ENV=production
+JWT_SECRET=long-random-secret
+DATABASE_URL=postgresql://...
+CORS_ORIGINS=https://supratco.github.io
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_STORAGE_BUCKET=roa-media
+STORAGE_PROVIDER=supabase
+```
+
+Never expose `SUPABASE_SERVICE_ROLE_KEY` in frontend code. It belongs only in Render environment variables.
+
+If `DATABASE_URL` is not set, the backend uses SQLite at `server/data/database.sqlite`. That is only recommended for local development unless your host provides a persistent disk.
+
+If Supabase Storage variables are not set, uploads use local `server/uploads/`. On Render without a persistent disk, those files can disappear after restarts/deploys.
+
+The PostgreSQL schema is documented in:
+
+```txt
+server/db/schema.sql
+```
+
+There is a best-effort migration script for existing local SQLite data:
+
+```bash
+cd server
+DATABASE_URL="postgresql://..." npm run migrate:sqlite-to-postgres
+```
+
+This script migrates database rows only. It does not upload existing local files from `server/uploads/` into Supabase Storage; those files should be reuploaded or migrated manually.
 
 ## Render Troubleshooting
 
@@ -112,7 +168,7 @@ Check the startup logs printed by `server/server.js`. The server now logs:
 - working directory,
 - server directory,
 - frontend/static root,
-- SQLite database path,
+- database mode and target,
 - uploads path,
 - route registration,
 - SQLite initialization result.
@@ -121,7 +177,7 @@ It also captures global startup failures with:
 
 - `UNCAUGHT EXCEPTION:`,
 - `UNHANDLED REJECTION:`,
-- `Could not initialize SQLite database:`.
+- `Could not initialize database:`.
 
 Common Render causes:
 
@@ -129,9 +185,10 @@ Common Render causes:
 - Node is still 24.x instead of 20.x.
 - Build cache reused old native `sqlite3` artifacts. Use `Manual Deploy > Clear build cache & deploy`.
 - `sqlite3` native binary was cached from an incompatible Linux image. The backend currently pins `sqlite3` to `5.1.7` to avoid the Render `GLIBC_2.38 not found` failure.
-- `DATABASE_PATH` points to a directory that does not exist or is not writable.
+- `DATABASE_URL` is missing or incorrect for PostgreSQL mode.
+- `DATABASE_PATH` points to a directory that does not exist or is not writable in local SQLite mode.
 - SQLite is running on ephemeral disk without a persistent volume.
-- Uploads are stored in `server/uploads`, which is also ephemeral unless a persistent disk is attached.
+- Supabase Storage variables are missing, so uploads fall back to local `server/uploads`.
 
 Render provides the port through `process.env.PORT`; the backend listens on `0.0.0.0` with that value. Do not hardcode a fixed port in Render.
 
@@ -168,8 +225,10 @@ The app also respects the browser/system `prefers-reduced-motion` setting.
 
 - Node.js
 - Express
-- SQLite
+- PostgreSQL (`pg`) in production when `DATABASE_URL` is set
+- SQLite (`sqlite3`) for local/development fallback
 - Multer for image/video/avatar uploads
+- Supabase Storage-compatible upload module for production media
 - bcrypt for local passwords
 - JSON Web Tokens for sessions
 - CORS
@@ -178,6 +237,7 @@ Production runtime:
 
 - Recommended Node runtime: `20.x`.
 - Current SQLite package: `sqlite3` `5.1.7`.
+- Current PostgreSQL package: `pg`.
 - `server/package.json` pins Render/Railway-compatible runtime selection with:
 
 ```json
@@ -200,8 +260,9 @@ Current dependency baseline:
 
 - `bcrypt` `^6.0.0`
 - `sqlite3` `5.1.7`
+- `pg`
 
-Local note: downgrading `sqlite3` to `5.1.7` can reintroduce audit warnings through older transitive build dependencies. Do not run `npm audit fix --force` blindly, because it may upgrade native SQLite packages back into the Render-incompatible path. For a stronger production setup, migrate the backend database layer to PostgreSQL.
+Local note: downgrading `sqlite3` to `5.1.7` can reintroduce audit warnings through older transitive build dependencies. Do not run `npm audit fix --force` blindly, because it may upgrade native SQLite packages back into the Render-incompatible path. For production, set `DATABASE_URL` and use PostgreSQL so Render does not depend on SQLite data files.
 
 The backend allows requests from:
 
@@ -223,25 +284,27 @@ Important: CORS uses origins only, not paths. For `https://supratco.github.io/RA
 https://supratco.github.io
 ```
 
-The SQLite database is created at:
+In SQLite local/development mode, the database is created at:
 
 ```txt
 server/data/database.sqlite
 ```
 
-Main tables include users, projects, project_members, sections, files, file_fields, tags, media, notifications, access_requests, forum_posts, forum_comments and forum_votes.
+In PostgreSQL production mode, the backend creates equivalent tables automatically with JSONB, TIMESTAMPTZ and BOOLEAN where appropriate.
+
+Main tables include users, projects, project_members, sections, files, file_fields, tags, file_tags, media, media_tags, notifications, access_requests, forum_posts, forum_comments, forum_votes and settings.
 
 Forum tables use indexes on post creation date, visibility, author, comments and votes. Likes are stored server-side with one vote per user/target, so counters persist after reload and are shared across accounts.
 
-Important production note: SQLite is fine for local use, prototypes and small deployments with a persistent disk. For serious multi-user production, use PostgreSQL/Supabase/Neon/Railway Postgres. A PostgreSQL adapter is not currently implemented.
+Important production note: SQLite is fine for local use, prototypes and small deployments with a persistent disk. For serious multi-user production, use PostgreSQL/Supabase/Neon/Railway Postgres. The backend uses PostgreSQL automatically when `DATABASE_URL` is configured.
 
-Uploads are stored under:
+In local mode, uploads are stored under:
 
 ```txt
 server/uploads/
 ```
 
-On hosting with ephemeral storage, uploaded avatars/images/videos can disappear after a deploy or restart. Use a persistent volume or move media to Supabase Storage, Cloudinary, S3/R2 or a similar service.
+In production, configure Supabase Storage or another external storage provider. The current implementation supports Supabase Storage through backend-only environment variables and stores media metadata in the `media` table (`storage_provider`, `storage_key`, `public_url`, `size`).
 
 ## Online Deployment Checklist
 
@@ -250,20 +313,27 @@ Use this checklist when deploying the real web version with GitHub Pages plus an
 1. Deploy the backend from `server/` to Render, Railway, Fly.io or a VPS.
 2. Set backend environment variables:
    - `JWT_SECRET`: long random secret.
+   - `DATABASE_URL`: Supabase/Neon/Railway PostgreSQL connection string.
    - `CORS_ORIGINS=https://supratco.github.io`
+   - `NODE_ENV=production`
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_STORAGE_BUCKET`
+   - `STORAGE_PROVIDER=supabase`
    - `PORT`: usually provided by the host.
-   - `DATABASE_PATH`: optional SQLite path if using a persistent disk.
+   - `DATABASE_PATH`: optional SQLite path only for local/dev or persistent-disk fallback.
 3. Make sure the backend URL is HTTPS, for example `https://mi-backend.onrender.com`.
 4. Configure the backend service to use Node 20 LTS, not Node 24.
 5. On Render, use `Manual Deploy > Clear build cache & deploy` after changing the Node version.
 6. Open `https://mi-backend.onrender.com/api/health` and confirm it returns JSON with `ok: true`.
-7. If using SQLite, attach a persistent disk and point the database to it. Without persistent storage, `server/data/database.sqlite` can be reset by redeploys/restarts depending on the host.
-8. If using uploads, attach persistent storage for `server/uploads/`. Without it, avatars, banners, images and videos can disappear after deploys/restarts.
-9. Edit `js/config.js` and set `onlineBackend`/`API_URL` to the deployed backend URL.
-10. Commit and push the frontend to GitHub Pages.
-11. Open `https://supratco.github.io/RAT-Ontological-Archive/`.
-12. In Settings > Server, press `Probar conexion`.
-13. Test real flows from GitHub Pages:
+7. Confirm `/api/health` returns `mode: "express-postgres"` for production.
+8. If using SQLite instead, attach a persistent disk and point the database to it. Without persistent storage, `server/data/database.sqlite` can be reset by redeploys/restarts depending on the host.
+9. If using local uploads instead of Supabase Storage, attach persistent storage for `server/uploads/`. Without it, avatars, banners, images and videos can disappear after deploys/restarts.
+10. Edit `js/config.js` and set `onlineBackend`/`API_URL` to the deployed backend URL.
+11. Commit and push the frontend to GitHub Pages.
+12. Open `https://supratco.github.io/RAT-Ontological-Archive/`.
+13. In Settings > Server, press `Probar conexion`.
+14. Test real flows from GitHub Pages:
     - register/login,
     - create a project,
     - create and save a document,
@@ -353,7 +423,7 @@ Private posts, private files and private sections are now checked by the backend
 
 Speech-to-text uses the browser Web Speech API. If the browser does not support it, the app shows a friendly warning and continues working.
 
-Images inserted into text come from the project gallery. In server mode, media uploads are stored under `server/uploads`.
+Images inserted into text come from the project gallery. In production server mode, media uploads should use Supabase Storage and only metadata is stored in PostgreSQL. If Supabase Storage is not configured, media falls back to local `server/uploads` for development.
 
 ## Local Cache And Upload Sessions
 

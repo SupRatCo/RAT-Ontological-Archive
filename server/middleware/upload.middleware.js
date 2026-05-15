@@ -1,6 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const { isExternalStorageConfigured } = require("../storage");
 
 function storageFor(kind) {
   const dir = path.join(__dirname, "..", "uploads", kind);
@@ -15,7 +16,7 @@ function storageFor(kind) {
 }
 
 const mediaUpload = multer({
-  storage: storageFor("images"),
+  storage: isExternalStorageConfigured() ? multer.memoryStorage() : storageFor("images"),
   limits: { fileSize: 30 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (/^image\/|^video\//.test(file.mimetype)) cb(null, true);
@@ -24,7 +25,7 @@ const mediaUpload = multer({
 });
 
 const avatarUpload = multer({
-  storage: storageFor("avatars"),
+  storage: isExternalStorageConfigured() ? multer.memoryStorage() : storageFor("avatars"),
   limits: { fileSize: 4 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => /^image\//.test(file.mimetype) ? cb(null, true) : cb(new Error("Unsupported avatar type"))
 });

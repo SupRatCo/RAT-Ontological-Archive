@@ -68,13 +68,19 @@ function registerRoute(app, mountPath, modulePath, selectExport) {
   app.use(mountPath, selectExport ? selectExport(loaded) : loaded);
 }
 
-if (hasPackage("express") && hasPackage("sqlite3")) {
+const wantsPostgres = Boolean(process.env.DATABASE_URL);
+const hasDatabaseDriver = wantsPostgres ? hasPackage("pg") : hasPackage("sqlite3");
+
+if (hasPackage("express") && hasDatabaseDriver) {
   ensureRuntimeDirectories();
-  console.log("Express and sqlite3 packages detected. Starting Express + SQLite mode.");
+  console.log(`Express and ${wantsPostgres ? "pg" : "sqlite3"} packages detected. Starting Express + ${wantsPostgres ? "PostgreSQL" : "SQLite"} mode.`);
   const express = require("express");
   const cors = require("cors");
-  const { init, dbPath } = require("./database");
-  console.log("SQLite database path:", dbPath);
+  const { init, dbPath, mode } = require("./database");
+  const storage = require("./storage");
+  console.log("Database mode:", mode);
+  console.log("Database target:", dbPath);
+  console.log("Storage provider:", storage.isExternalStorageConfigured() ? storage.provider : "local");
 
   const app = express();
   const corsOptions = {
@@ -91,7 +97,13 @@ if (hasPackage("express") && hasPackage("sqlite3")) {
   app.use(cors(corsOptions));
   app.options("*", cors(corsOptions));
   console.log("CORS middleware registered before API routes. Allowed origins:", Array.from(allowedOrigins).join(", "));
-  app.get("/api/health", (_req, res) => res.json({ ok: true, mode: "express-sqlite", name: "RAT Ontological Archive" }));
+  app.get("/api/health", (_req, res) => res.json({
+    ok: true,
+    mode: mode === "postgres" ? "express-postgres" : "express-sqlite",
+    database: mode,
+    storage: storage.isExternalStorageConfigured() ? storage.provider : "local",
+    name: "RAT Ontological Archive"
+  }));
   app.get("/api/cors-test", (req, res) => {
     res.json({
       ok: true,
@@ -141,21 +153,21 @@ if (hasPackage("express") && hasPackage("sqlite3")) {
     });
   });
 
-  console.log("Initializing SQLite database...");
+  console.log(`Initializing ${mode === "postgres" ? "PostgreSQL" : "SQLite"} database...`);
   init().then(() => {
-    console.log("SQLite database initialized successfully.");
+    console.log(`${mode === "postgres" ? "PostgreSQL" : "SQLite"} database initialized successfully.`);
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`RAT Ontological Archive running at http://0.0.0.0:${PORT}`);
     });
   }).catch((error) => {
-    console.error("Could not initialize SQLite database:", error);
-    console.error("Database path was:", dbPath);
+    console.error("Could not initialize database:", error);
+    console.error("Database target was:", dbPath);
     process.exit(1);
   });
 } else {
   ensureRuntimeDirectories();
-  console.log("Express or sqlite3 package missing. Starting fallback JSON server.");
+  console.log(`Express or ${wantsPostgres ? "pg" : "sqlite3"} package missing. Starting fallback JSON server.`);
   startFallbackServer();
 }
 

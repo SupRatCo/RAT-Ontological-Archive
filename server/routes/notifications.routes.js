@@ -28,7 +28,7 @@ router.patch("/:id/read", requireAuth, async (req, res, next) => {
   try {
     const notice = await get("SELECT * FROM notifications WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
     if (!notice) return res.status(404).json({ error: "Notification not found" });
-    await run("UPDATE notifications SET read = 1 WHERE id = ?", [req.params.id]);
+    await run("UPDATE notifications SET read = ? WHERE id = ?", [true, req.params.id]);
     res.json({ ok: true });
   } catch (error) { next(error); }
 });

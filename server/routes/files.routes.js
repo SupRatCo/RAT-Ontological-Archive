@@ -59,7 +59,7 @@ router.post("/project/:projectId", requireAuth, requireProjectEditor("projectId"
     const id = req.body.id || uid("file");
     const dataJson = Object.assign({}, req.body.data || {}, { internalSections: req.body.internalSections || (req.body.data || {}).internalSections || [] });
     await run("INSERT INTO files (id, project_id, section_id, type, title, content, data_json, visibility, favorite, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-      id, req.params.projectId, req.body.sectionId || null, req.body.type || "text", req.body.title || "Archivo", req.body.content || "", JSON.stringify(dataJson), req.body.visibility || "inherit", req.body.favorite ? 1 : 0, req.body.status || "Borrador", now(), now()
+      id, req.params.projectId, req.body.sectionId || null, req.body.type || "text", req.body.title || "Archivo", req.body.content || "", JSON.stringify(dataJson), req.body.visibility || "inherit", !!req.body.favorite, req.body.status || "Borrador", now(), now()
     ]);
     res.json({ file: fileOut(await get("SELECT * FROM files WHERE id = ?", [id])) });
   } catch (error) { next(error); }
@@ -86,7 +86,7 @@ router.patch("/:fileId", requireAuth, async (req, res, next) => {
       const dataJson = req.body.data ? Object.assign({}, req.body.data || {}, { internalSections: req.body.internalSections || (req.body.data || {}).internalSections || [] }) : null;
       await run(
         "UPDATE files SET section_id = COALESCE(?, section_id), type = COALESCE(?, type), title = COALESCE(?, title), content = COALESCE(?, content), data_json = COALESCE(?, data_json), visibility = COALESCE(?, visibility), favorite = COALESCE(?, favorite), status = COALESCE(?, status), updated_at = ? WHERE id = ?",
-        [req.body.sectionId ?? null, req.body.type ?? null, req.body.title ?? null, req.body.content ?? null, dataJson ? JSON.stringify(dataJson) : null, req.body.visibility ?? null, req.body.favorite == null ? null : (req.body.favorite ? 1 : 0), req.body.status ?? null, now(), req.params.fileId]
+        [req.body.sectionId ?? null, req.body.type ?? null, req.body.title ?? null, req.body.content ?? null, dataJson ? JSON.stringify(dataJson) : null, req.body.visibility ?? null, req.body.favorite == null ? null : !!req.body.favorite, req.body.status ?? null, now(), req.params.fileId]
       );
       if (Array.isArray(req.body.dynamicFields)) {
         await run("DELETE FROM file_fields WHERE file_id = ?", [req.params.fileId]);
