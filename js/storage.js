@@ -21,6 +21,7 @@
   function defaultSettings() {
     return {
       theme: "gold",
+      appearanceMode: "og",
       volume: 70,
       brightness: 100,
       animations: true,
@@ -30,16 +31,19 @@
       customBackground: "",
       language: "es-latam",
       autosave: true,
+      confirmations: true,
       uiFontScale: 100,
       performanceMode: false,
       visualQuality: "high",
       performanceBackground: "animated",
       reducedMotion: false,
+      highContrast: false,
       disableGlows: false,
       disableShadows: false,
       disableTransitions: false,
       disableParticles: false,
       muteSounds: false,
+      notificationSounds: true,
       lastSavedAt: null
     };
   }

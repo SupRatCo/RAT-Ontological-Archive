@@ -206,16 +206,19 @@ npm_config_build_from_source=true
 
 After changing any Node/sqlite setting, use `Manual Deploy > Clear build cache & deploy`, not a normal deploy.
 
-## Performance Mode
+## Appearance And Performance
 
-Open Settings > Rendimiento to reduce visual load on slower machines.
+Open Settings > Video to choose the interface appearance and reduce visual load on slower machines.
 
 Available controls:
 
+- Apariencia de interfaz: OG, Modern and Ancient.
+- Theme sets per appearance mode.
+- Brightness, background, overlay and background fit.
 - Modo rendimiento: reduces glow, shadows, blur and animated background work.
 - Calidad visual: Alta, Media, Baja and Ultra baja.
 - Fondo: Animado, Estatico or Color plano.
-- Toggles for reduced motion, glows, large shadows, transitions, particles and UI sounds.
+- Toggles for reduced animations, reduced motion, high contrast, glows, large shadows, transitions and particles.
 
 These preferences are saved with the current user and applied as global body classes such as `performance-mode`, `quality-low`, `quality-ultra-low`, `reduced-motion`, `no-glow`, `no-particles` and `flat-background`.
 
@@ -332,7 +335,7 @@ Use this checklist when deploying the real web version with GitHub Pages plus an
 10. Edit `js/config.js` and set `onlineBackend`/`API_URL` to the deployed backend URL.
 11. Commit and push the frontend to GitHub Pages.
 12. Open `https://supratco.github.io/RAT-Ontological-Archive/`.
-13. In Settings > Server, press `Probar conexion`.
+13. In Settings > Data, press `Probar conexion`.
 14. Test real flows from GitHub Pages:
     - register/login,
     - create a project,
@@ -376,13 +379,13 @@ Important modules:
 - Main forum opened by clicking the RAT Ontological Archive logo.
 - Forum posts, document posts, comments, direct replies, toggle likes, saved posts, filters, search and public profiles.
 - Profile customization with avatar, banner, bio, links and accent color.
-- Settings split into tabs: General, Account, Appearance, Audio, Video, Language, Data, Projects, Accessibility and Server.
-- Settings include Rendimiento and Server diagnostics.
+- Settings split into tabs: General, Account, Video, Audio, Data and Projects.
+- Settings include interface appearances, performance controls and server diagnostics.
 - Language selector for Spanish LATAM, Spanish Spain, English and Portuguese.
 
 ## Server Diagnostics
 
-Open Settings > Server and press `Probar conexion`.
+Open Settings > Data and press `Probar conexion`.
 
 The panel shows:
 

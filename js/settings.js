@@ -1,10 +1,79 @@
 (function () {
   const { UI, Storage } = window.ROA;
-  const themeLabels = { gold: "Dorado", violet: "Violeta", green: "Verde", cyan: "Azul", red: "Rojo", black: "Negro", basicDark: "Oscuro" };
-  const languageLabels = { "es-latam": "Español LATAM", "es-es": "Español España", en: "English", pt: "Português" };
+
+  const appearanceLabels = {
+    og: "Modo OG",
+    modern: "Modo Modern",
+    ancient: "Modo Ancient"
+  };
+
+  const appearanceThemes = {
+    og: {
+      gold: "Dorado",
+      violet: "Violeta",
+      green: "Verde",
+      blue: "Azul",
+      red: "Rojo",
+      black: "Negro",
+      basicDark: "Oscuro"
+    },
+    modern: {
+      gold: "Dorado",
+      purple: "Morado",
+      green: "Verde",
+      blue: "Azul",
+      sky: "Celeste",
+      crimson: "Carmesi",
+      black: "Negro"
+    },
+    ancient: {
+      library: "Libreria",
+      castle: "Castillo",
+      village: "Aldea",
+      forest: "Bosque",
+      inferno: "Infierno",
+      dungeon: "Dungeon",
+      mountain: "Montana",
+      tavern: "Bar"
+    }
+  };
+
+  const themeAliases = {
+    cyan: "blue",
+    dark: "basicDark"
+  };
+
+  const languageLabels = {
+    "es-latam": "Espanol LATAM",
+    "es-es": "Espanol Espana",
+    en: "English",
+    pt: "Portugues"
+  };
+
+  const allThemeKeys = Array.from(new Set(Object.values(appearanceThemes).flatMap((group) => Object.keys(group)).concat(Object.keys(themeAliases))));
+  const themeLabels = Object.assign({}, appearanceThemes.og, appearanceThemes.modern, appearanceThemes.ancient);
+
+  function normalizeAppearanceMode(value) {
+    return appearanceThemes[value] ? value : "og";
+  }
+
+  function normalizeTheme(mode, value) {
+    const themes = appearanceThemes[mode] || appearanceThemes.og;
+    const aliased = themeAliases[value] || value;
+    return themes[aliased] ? aliased : Object.keys(themes)[0];
+  }
 
   function applySettings(settings) {
-    document.body.dataset.theme = settings.theme || "gold";
+    const mode = normalizeAppearanceMode(settings.appearanceMode || "og");
+    const theme = normalizeTheme(mode, settings.theme || "gold");
+    settings.appearanceMode = mode;
+    settings.theme = theme;
+
+    document.body.dataset.appearance = mode;
+    document.body.dataset.theme = theme;
+    Object.keys(appearanceLabels).forEach((key) => document.body.classList.toggle(`appearance-${key}`, mode === key));
+    allThemeKeys.forEach((key) => document.body.classList.toggle(`theme-${key}`, theme === key));
+
     if (window.ROA.Backgrounds) window.ROA.Backgrounds.apply(settings);
     else document.body.dataset.background = settings.background || "deepSpace";
     document.body.style.setProperty("--app-brightness", `${settings.brightness || 100}%`);
@@ -15,6 +84,7 @@
       document.body.classList.toggle(`quality-${quality}`, (settings.visualQuality || "high") === quality);
     });
     document.body.classList.toggle("reduced-motion", !!settings.reducedMotion || settings.animations === false);
+    document.body.classList.toggle("high-contrast", !!settings.highContrast);
     document.body.classList.toggle("no-glow", !!settings.disableGlows || !!settings.performanceMode || settings.visualQuality === "ultra-low");
     document.body.classList.toggle("no-shadows", !!settings.disableShadows || settings.visualQuality === "low" || settings.visualQuality === "ultra-low");
     document.body.classList.toggle("no-transitions", !!settings.disableTransitions || settings.visualQuality === "ultra-low");
@@ -23,9 +93,8 @@
     document.body.classList.toggle("flat-background", settings.performanceBackground === "plain" || settings.visualQuality === "ultra-low");
   }
 
-  async function updateSetting(key, value) {
+  function persistSettings() {
     const app = window.ROA.App;
-    app.data.settings[key] = value;
     const user = window.ROA.Auth.currentUser();
     if (user) user.settings = Object.assign(user.settings || {}, app.data.settings);
     app.save();
@@ -35,6 +104,21 @@
     }
   }
 
+  async function updateSetting(key, value) {
+    const app = window.ROA.App;
+    app.data.settings[key] = value;
+    persistSettings();
+  }
+
+  function updateAppearanceMode(mode) {
+    const app = window.ROA.App;
+    const nextMode = normalizeAppearanceMode(mode);
+    app.data.settings.appearanceMode = nextMode;
+    app.data.settings.theme = normalizeTheme(nextMode, app.data.settings.theme);
+    persistSettings();
+    openSettings("video");
+  }
+
   function tabButton(key, label, active) {
     return `<button class="settings-tab ${active === key ? "active" : ""}" type="button" data-action="settings-tab" data-settings-tab="${key}">${label}</button>`;
   }
@@ -42,7 +126,9 @@
   function openSettings(active) {
     const app = window.ROA.App;
     const settings = app.data.settings;
-    const tab = active || settings.activeSettingsTab || "general";
+    const tab = ["general", "account", "video", "audio", "data", "projects", "security"].includes(active || settings.activeSettingsTab)
+      ? (active || settings.activeSettingsTab)
+      : "general";
     const t = window.ROA.I18n ? window.ROA.I18n.t : (key) => key;
     UI.openModal(t("settings"), `
       <div class="settings-layout">
@@ -50,15 +136,10 @@
           ${[
             ["general", t("general")],
             ["account", t("account")],
-            ["appearance", t("appearance")],
-            ["audio", t("audio")],
             ["video", t("video")],
-            ["performance", "Rendimiento"],
-            ["language", t("language")],
+            ["audio", t("audio")],
             ["data", t("data")],
-            ["projects", t("projects")],
-            ["accessibility", t("accessibility")],
-            ["server", t("server")]
+            ["projects", t("projects")]
           ].map(([key, label]) => tabButton(key, label, tab)).join("")}
         </nav>
         <section class="settings-panel">${renderTab(tab, settings, app.data.projects)}</section>
@@ -68,63 +149,117 @@
     bindSettingsModal(tab);
   }
 
-  function renderTab(tab, settings, projects) {
-    if (tab === "account") return `
-      <div class="panel flat"><h3>Cuenta</h3><p class="meta">Edita perfil, avatar y banner desde el boton de usuario.</p><button class="action" data-action="open-profile" type="button">Abrir perfil</button><button class="danger-action" data-action="logout" type="button">Cerrar sesion</button></div>`;
-    if (tab === "appearance") return `
-      <div class="panel flat"><h3>Apariencia</h3>
-        <label class="field">Tema<select id="settingTheme">${Object.entries(themeLabels).map(([key, label]) => `<option value="${key}" ${settings.theme === key ? "selected" : ""}>${label}</option>`).join("")}</select></label>
-        <label class="field">Fondo<select id="settingBackground">${Object.entries(window.ROA.Backgrounds.labels).map(([key, label]) => `<option value="${key}" ${settings.background === key ? "selected" : ""}>${label}</option>`).join("")}</select></label>
-        <label class="field">Brillo <span id="brightnessValue">${settings.brightness}</span>%<input id="settingBrightness" type="range" min="50" max="150" value="${settings.brightness}"></label>
-        <button class="ghost-action" type="button" data-action="trigger-background-upload">Subir fondo</button>
-      </div>`;
-    if (tab === "audio") return `<div class="panel flat"><h3>Audio</h3><label class="field">Volumen <span id="volumeValue">${settings.volume}</span>%<input id="settingVolume" type="range" min="0" max="100" value="${settings.volume}"></label></div>`;
-    if (tab === "video") return `<div class="panel flat"><h3>Video</h3><label class="field">Overlay <span id="overlayValue">${settings.backgroundOverlay}</span>%<input id="settingBackgroundOverlay" type="range" min="0" max="85" value="${settings.backgroundOverlay}"></label><label class="field">Ajuste<select id="settingBackgroundFit">${["cover", "contain", "repeat", "auto"].map((item) => `<option value="${item}" ${settings.backgroundFit === item ? "selected" : ""}>${item}</option>`).join("")}</select></label></div>`;
-    if (tab === "performance") return `
-      <div class="panel flat"><h3>Rendimiento</h3>
-        <label class="switch-row"><strong>Modo rendimiento</strong><input id="settingPerformanceMode" type="checkbox" ${settings.performanceMode ? "checked" : ""}></label>
-        <label class="field">Calidad visual
-          <select id="settingVisualQuality">
-            ${[["high", "Alta"], ["medium", "Media"], ["low", "Baja"], ["ultra-low", "Ultra baja"]].map(([key, label]) => `<option value="${key}" ${(settings.visualQuality || "high") === key ? "selected" : ""}>${label}</option>`).join("")}
+  function renderAppearanceControls(settings) {
+    const mode = normalizeAppearanceMode(settings.appearanceMode || "og");
+    const theme = normalizeTheme(mode, settings.theme || "gold");
+    const themes = appearanceThemes[mode];
+    return `
+      <div class="settings-section">
+        <h3>Apariencia de interfaz</h3>
+        <div class="segmented-control" role="group" aria-label="Apariencia de interfaz">
+          ${Object.entries(appearanceLabels).map(([key, label]) => `<button class="segment-button ${mode === key ? "active" : ""}" type="button" data-appearance-mode="${key}">${label}</button>`).join("")}
+        </div>
+        <label class="field">Tema
+          <select id="settingTheme">
+            ${Object.entries(themes).map(([key, label]) => `<option value="${key}" ${theme === key ? "selected" : ""}>${label}</option>`).join("")}
           </select>
         </label>
-        <label class="field">Fondo
-          <select id="settingPerformanceBackground">
-            ${[["animated", "Animado"], ["static", "Estatico"], ["plain", "Color plano"]].map(([key, label]) => `<option value="${key}" ${(settings.performanceBackground || "animated") === key ? "selected" : ""}>${label}</option>`).join("")}
-          </select>
-        </label>
-        <label class="switch-row"><strong>Reducir movimiento</strong><input id="settingReducedMotion" type="checkbox" ${settings.reducedMotion ? "checked" : ""}></label>
-        <label class="switch-row"><strong>Desactivar glows</strong><input id="settingDisableGlows" type="checkbox" ${settings.disableGlows ? "checked" : ""}></label>
-        <label class="switch-row"><strong>Desactivar sombras grandes</strong><input id="settingDisableShadows" type="checkbox" ${settings.disableShadows ? "checked" : ""}></label>
-        <label class="switch-row"><strong>Desactivar transiciones</strong><input id="settingDisableTransitions" type="checkbox" ${settings.disableTransitions ? "checked" : ""}></label>
-        <label class="switch-row"><strong>Desactivar particulas</strong><input id="settingDisableParticles" type="checkbox" ${settings.disableParticles ? "checked" : ""}></label>
-        <label class="switch-row"><strong>Silenciar sonidos UI</strong><input id="settingMuteSounds" type="checkbox" ${settings.muteSounds ? "checked" : ""}></label>
       </div>`;
-    if (tab === "language") return `<div class="panel flat"><h3>Idioma</h3><label class="field">Idioma<select id="settingLanguage">${Object.entries(languageLabels).map(([key, label]) => `<option value="${key}" ${settings.language === key ? "selected" : ""}>${label}</option>`).join("")}</select></label></div>`;
-    if (tab === "data") {
-      const usage = Storage.localStorageUsage ? Storage.localStorageUsage() : { mb: 0, oldCacheDetected: false, cacheStatus: {} };
-      const quotaWarning = usage.cacheStatus && usage.cacheStatus.quotaExceeded;
-      return `<div class="panel flat"><h3>Datos</h3>
+  }
+
+  function renderVideoTab(settings) {
+    const backgrounds = window.ROA.Backgrounds ? window.ROA.Backgrounds.labels : {};
+    return `
+      <div class="settings-stack">
+        <div class="panel flat">
+          ${renderAppearanceControls(settings)}
+          <div class="settings-section">
+            <h3>Fondo y brillo</h3>
+            <label class="field">Brillo <span id="brightnessValue">${settings.brightness || 100}</span>%
+              <input id="settingBrightness" type="range" min="50" max="150" value="${settings.brightness || 100}">
+            </label>
+            <label class="field">Fondo
+              <select id="settingBackground">${Object.entries(backgrounds).map(([key, label]) => `<option value="${key}" ${settings.background === key ? "selected" : ""}>${label}</option>`).join("")}</select>
+            </label>
+            <div class="inline-actions">
+              <button class="ghost-action" type="button" data-action="trigger-background-upload">Subir fondo</button>
+            </div>
+            <label class="field">Overlay <span id="overlayValue">${settings.backgroundOverlay == null ? 35 : settings.backgroundOverlay}</span>%
+              <input id="settingBackgroundOverlay" type="range" min="0" max="85" value="${settings.backgroundOverlay == null ? 35 : settings.backgroundOverlay}">
+            </label>
+            <label class="field">Ajuste
+              <select id="settingBackgroundFit">${["cover", "contain", "repeat", "auto"].map((item) => `<option value="${item}" ${settings.backgroundFit === item ? "selected" : ""}>${item}</option>`).join("")}</select>
+            </label>
+          </div>
+          <div class="settings-section">
+            <h3>Rendimiento visual</h3>
+            <label class="field">Calidad visual
+              <select id="settingVisualQuality">
+                ${[["high", "Alta"], ["medium", "Media"], ["low", "Baja"], ["ultra-low", "Ultra baja"]].map(([key, label]) => `<option value="${key}" ${(settings.visualQuality || "high") === key ? "selected" : ""}>${label}</option>`).join("")}
+              </select>
+            </label>
+            <label class="field">Fondo de rendimiento
+              <select id="settingPerformanceBackground">
+                ${[["animated", "Animado"], ["static", "Estatico"], ["plain", "Color plano"]].map(([key, label]) => `<option value="${key}" ${(settings.performanceBackground || "animated") === key ? "selected" : ""}>${label}</option>`).join("")}
+              </select>
+            </label>
+            <label class="switch-row"><strong>Modo rendimiento</strong><input id="settingPerformanceMode" type="checkbox" ${settings.performanceMode ? "checked" : ""}></label>
+            <label class="switch-row"><strong>Reducir animaciones</strong><input id="settingAnimations" type="checkbox" ${settings.animations === false ? "checked" : ""}></label>
+            <label class="switch-row"><strong>Reducir movimiento</strong><input id="settingReducedMotion" type="checkbox" ${settings.reducedMotion ? "checked" : ""}></label>
+            <label class="switch-row"><strong>Alto contraste</strong><input id="settingHighContrast" type="checkbox" ${settings.highContrast ? "checked" : ""}></label>
+            <label class="switch-row"><strong>Desactivar glows</strong><input id="settingDisableGlows" type="checkbox" ${settings.disableGlows ? "checked" : ""}></label>
+            <label class="switch-row"><strong>Desactivar sombras grandes</strong><input id="settingDisableShadows" type="checkbox" ${settings.disableShadows ? "checked" : ""}></label>
+            <label class="switch-row"><strong>Desactivar transiciones</strong><input id="settingDisableTransitions" type="checkbox" ${settings.disableTransitions ? "checked" : ""}></label>
+            <label class="switch-row"><strong>Desactivar particulas</strong><input id="settingDisableParticles" type="checkbox" ${settings.disableParticles ? "checked" : ""}></label>
+            <label class="field">Tamano de interfaz <span id="uiFontScaleValue">${settings.uiFontScale || 100}</span>%
+              <input id="settingUiFontScale" type="range" min="85" max="125" value="${settings.uiFontScale || 100}">
+            </label>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderDataTab(settings) {
+    const usage = Storage.localStorageUsage ? Storage.localStorageUsage() : { mb: 0, oldCacheDetected: false, cacheStatus: {} };
+    const quotaWarning = usage.cacheStatus && usage.cacheStatus.quotaExceeded;
+    return `<div class="settings-stack">
+      <div class="panel flat"><h3>Estado del servidor</h3>
+        <p class="meta">API: ${UI.escape(window.ROA.Api.baseUrl || "Sin configurar")}</p>
+        <p class="meta">Health: ${UI.escape(window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : "Sin configurar")}</p>
+        <div class="inline-actions">
+          <button class="action" type="button" data-action="test-server">Probar conexion</button>
+          <button class="ghost-action" type="button" data-action="clear-server-errors">Limpiar historial de errores</button>
+        </div>
+        <div id="serverStatus" class="server-diagnostics meta">${renderServerDiagnostics()}</div>
+      </div>
+      <div class="panel flat"><h3>Datos y guardado</h3>
         <p class="meta">Ultimo guardado: ${UI.formatDate(settings.lastSavedAt)}</p>
         <p class="meta">Uso local aproximado: ${usage.mb.toFixed(2)} MB</p>
-        <p class="meta">Caché antigua detectada: ${usage.oldCacheDetected ? "si" : "no"}</p>
-        ${quotaWarning ? `<p class="server-alert">La caché local superó la cuota. En modo servidor se guardarán solo preferencias livianas.</p>` : ""}
+        <p class="meta">Cache antigua detectada: ${usage.oldCacheDetected ? "si" : "no"}</p>
+        ${quotaWarning ? `<p class="server-alert">La cache local supero la cuota. En modo servidor se guardaran solo preferencias livianas.</p>` : ""}
         <div class="inline-actions">
           <button class="action" data-action="export-all" type="button">Exportar</button>
           <button class="ghost-action" data-action="trigger-backup-import" type="button">Importar</button>
-          <button class="ghost-action" data-action="clear-local-cache" type="button">Limpiar caché local</button>
+          <button class="ghost-action" data-action="clear-local-cache" type="button">Limpiar cache local</button>
           <button class="danger-action" data-action="reset-all-data" type="button">Borrar todo</button>
         </div>
-      </div>`;
-    }
-    if (tab === "projects") return `<div class="panel flat"><h3>Proyectos</h3><div class="item-list">${projects.map((project) => `<article class="list-row"><strong>${UI.escape(project.name)}</strong><span class="meta">${UI.escape(project.visibility || "private")}</span><div class="inline-actions"><button class="action" data-action="select-project" data-project-id="${project.id}">Abrir</button><button class="ghost-action" data-action="toggle-project-visibility" data-project-id="${project.id}">Visibilidad</button><button class="danger-action" data-action="delete-project-by-id" data-project-id="${project.id}">Eliminar</button></div></article>`).join("") || "<p class='meta'>Sin proyectos.</p>"}</div></div>`;
-    if (tab === "accessibility") return `<div class="panel flat"><h3>Accesibilidad</h3><label class="field">Tamaño UI <span id="uiFontScaleValue">${settings.uiFontScale || 100}</span>%<input id="settingUiFontScale" type="range" min="85" max="125" value="${settings.uiFontScale || 100}"></label><label class="switch-row"><strong>Reducir movimiento</strong><input id="settingAnimations" type="checkbox" ${settings.animations === false ? "checked" : ""}></label></div>`;
-    if (tab === "server") return `<div class="panel flat"><h3>Servidor</h3><p class="meta">API: ${UI.escape(window.ROA.Api.baseUrl || "Sin configurar")}</p><p class="meta">Health: ${UI.escape(window.ROA.Api.healthUrl ? window.ROA.Api.healthUrl() : "Sin configurar")}</p><div class="inline-actions"><button class="action" type="button" data-action="test-server">Probar conexion</button><button class="ghost-action" type="button" data-action="clear-server-errors">Limpiar historial de errores</button></div><div id="serverStatus" class="server-diagnostics meta">${renderServerDiagnostics()}</div></div>`;
-    return `<div class="panel flat"><h3>General</h3><label class="switch-row"><strong>Autoguardado</strong><input id="settingAutosave" type="checkbox" ${settings.autosave !== false ? "checked" : ""}></label></div>`;
+      </div>
+    </div>`;
   }
 
-  function bindSettingsModal(tab) {
+  function renderTab(tab, settings, projects) {
+    if (tab === "account") return `
+      <div class="panel flat"><h3>Cuenta</h3><p class="meta">Edita perfil, avatar y banner desde el boton de usuario.</p><button class="action" data-action="open-profile" type="button">Abrir perfil</button><button class="danger-action" data-action="logout" type="button">Cerrar sesion</button></div>`;
+    if (tab === "video") return renderVideoTab(settings);
+    if (tab === "audio") return `<div class="panel flat"><h3>Audio</h3><label class="field">Volumen general <span id="volumeValue">${settings.volume || 0}</span>%<input id="settingVolume" type="range" min="0" max="100" value="${settings.volume || 0}"></label><label class="switch-row"><strong>Sonidos de interfaz</strong><input id="settingMuteSounds" type="checkbox" ${settings.muteSounds ? "" : "checked"}></label><label class="switch-row"><strong>Sonidos de notificacion</strong><input id="settingNotificationSounds" type="checkbox" ${settings.notificationSounds === false ? "" : "checked"}></label><label class="switch-row"><strong>Silenciar todo</strong><input id="settingMuteAll" type="checkbox" ${settings.muteSounds ? "checked" : ""}></label></div>`;
+    if (tab === "data") return renderDataTab(settings);
+    if (tab === "projects") return `<div class="panel flat"><h3>Proyectos</h3><div class="item-list">${projects.map((project) => `<article class="list-row"><strong>${UI.escape(project.name)}</strong><span class="meta">${UI.escape(project.visibility || "private")}</span><div class="inline-actions"><button class="action" data-action="select-project" data-project-id="${project.id}">Abrir</button><button class="ghost-action" data-action="toggle-project-visibility" data-project-id="${project.id}">Visibilidad</button><button class="danger-action" data-action="delete-project-by-id" data-project-id="${project.id}">Eliminar</button></div></article>`).join("") || "<p class='meta'>Sin proyectos.</p>"}</div></div>`;
+    return `<div class="panel flat"><h3>General</h3><label class="field">Idioma<select id="settingLanguage">${Object.entries(languageLabels).map(([key, label]) => `<option value="${key}" ${settings.language === key ? "selected" : ""}>${label}</option>`).join("")}</select></label><label class="switch-row"><strong>Autoguardado</strong><input id="settingAutosave" type="checkbox" ${settings.autosave !== false ? "checked" : ""}></label><label class="switch-row"><strong>Confirmaciones importantes</strong><input id="settingConfirmations" type="checkbox" ${settings.confirmations === false ? "" : "checked"}></label></div>`;
+  }
+
+  function bindSettingsModal() {
     const bind = (id, event, fn) => { const node = UI.qs(`#${id}`); if (node) node.addEventListener(event, fn); };
+    UI.qsa("[data-appearance-mode]").forEach((button) => button.addEventListener("click", () => updateAppearanceMode(button.dataset.appearanceMode)));
     bind("settingTheme", "change", (event) => updateSetting("theme", event.target.value));
     bind("settingBackground", "change", (event) => updateSetting("background", event.target.value));
     bind("settingBrightness", "input", (event) => { UI.qs("#brightnessValue").textContent = event.target.value; updateSetting("brightness", Number(event.target.value)); });
@@ -135,15 +270,19 @@
     bind("settingVisualQuality", "change", (event) => updateSetting("visualQuality", event.target.value));
     bind("settingPerformanceBackground", "change", (event) => updateSetting("performanceBackground", event.target.value));
     bind("settingReducedMotion", "change", (event) => updateSetting("reducedMotion", event.target.checked));
+    bind("settingHighContrast", "change", (event) => updateSetting("highContrast", event.target.checked));
     bind("settingDisableGlows", "change", (event) => updateSetting("disableGlows", event.target.checked));
     bind("settingDisableShadows", "change", (event) => updateSetting("disableShadows", event.target.checked));
     bind("settingDisableTransitions", "change", (event) => updateSetting("disableTransitions", event.target.checked));
     bind("settingDisableParticles", "change", (event) => updateSetting("disableParticles", event.target.checked));
-    bind("settingMuteSounds", "change", (event) => updateSetting("muteSounds", event.target.checked));
-    bind("settingLanguage", "change", (event) => { updateSetting("language", event.target.value); openSettings("language"); });
+    bind("settingMuteSounds", "change", (event) => updateSetting("muteSounds", !event.target.checked));
+    bind("settingNotificationSounds", "change", (event) => updateSetting("notificationSounds", event.target.checked));
+    bind("settingMuteAll", "change", (event) => updateSetting("muteSounds", event.target.checked));
+    bind("settingLanguage", "change", (event) => { updateSetting("language", event.target.value); openSettings("general"); });
     bind("settingUiFontScale", "input", (event) => { UI.qs("#uiFontScaleValue").textContent = event.target.value; updateSetting("uiFontScale", Number(event.target.value)); });
     bind("settingAnimations", "change", (event) => updateSetting("animations", !event.target.checked));
     bind("settingAutosave", "change", (event) => updateSetting("autosave", event.target.checked));
+    bind("settingConfirmations", "change", (event) => updateSetting("confirmations", event.target.checked));
   }
 
   async function testServer() {
@@ -247,6 +386,6 @@
     if (volume && !muted) window.ROA.lastSoundRequest = { name, volume, at: Date.now() };
   }
 
-  window.ROA.Settings = { applySettings, openSettings, exportAll, resetAllData, importBackupFile, playSound, themeLabels, testServer, clearServerErrors, clearLocalCache };
+  window.ROA.Settings = { applySettings, openSettings, exportAll, resetAllData, importBackupFile, playSound, themeLabels, appearanceLabels, appearanceThemes, testServer, clearServerErrors, clearLocalCache };
   window.playSound = playSound;
 })();

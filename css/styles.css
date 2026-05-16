@@ -62,7 +62,7 @@ button {
 
 body[data-background="deepSpace"] .star-layer,
 body[data-background="spaceAnimated"] .star-layer {
-  animation: starDrift 34s linear infinite;
+  animation: starDrift 90s linear infinite;
 }
 
 body[data-background="starField"] .star-layer,
@@ -141,6 +141,11 @@ body.quality-ultra-low .star-layer {
   background: var(--bg-deep) !important;
 }
 
+body.high-contrast {
+  --text-muted: color-mix(in srgb, var(--text-main) 82%, var(--bg-deep));
+  --line: var(--accent);
+}
+
 body.no-glow *,
 body.no-glow *::before,
 body.no-glow *::after,
@@ -199,6 +204,44 @@ body.reduced-motion *::after {
   gap: 6px;
   margin-top: 10px;
   font-size: 12px;
+}
+
+.settings-stack,
+.settings-section {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-section {
+  padding: 0 0 16px;
+  margin: 0 0 16px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+
+.settings-section:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+
+.segmented-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.segment-button {
+  border: 1px solid var(--line);
+  border-radius: var(--button-radius, 8px);
+  padding: 9px 12px;
+  color: var(--text-main);
+  background: rgba(0,0,0,.16);
+  font-weight: 800;
+}
+
+.segment-button.active {
+  color: var(--text-dark);
+  background: var(--accent);
 }
 
 .server-alert {
@@ -1114,4 +1157,152 @@ body.sidebar-collapsed .project-pill small {
 
 .danger-zone h3 {
   color: var(--danger);
+}
+
+/* Visual appearance modes */
+body.appearance-modern {
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+body.appearance-modern .sidebar,
+body.appearance-modern .main-view,
+body.appearance-modern .modal,
+body.appearance-modern .panel,
+body.appearance-modern .archive-card,
+body.appearance-modern .card-button,
+body.appearance-modern .list-row {
+  border-width: 1px !important;
+  border-radius: var(--surface-radius, 14px) !important;
+}
+
+body.appearance-modern .sidebar {
+  padding: 18px 14px;
+  background: rgba(8, 13, 20, 0.72);
+}
+
+body.appearance-modern .brand-plate {
+  width: auto;
+  min-height: 94px;
+  clip-path: none;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  color: var(--accent-soft);
+  background: rgba(255,255,255,.06);
+  font-size: 26px;
+}
+
+body.appearance-modern .topbar {
+  clip-path: none;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--text-main);
+  background: rgba(11, 18, 28, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+body.appearance-modern .topbar-title strong,
+body.appearance-modern .view-header h1,
+body.appearance-modern .view-header h2,
+body.appearance-modern .card-button strong,
+body.appearance-modern .archive-card strong {
+  text-transform: none;
+}
+
+body.appearance-modern .project-pill,
+body.appearance-modern .side-add,
+body.appearance-modern .action {
+  color: var(--text-dark);
+  border-radius: var(--button-radius, 10px);
+  background: var(--accent);
+  box-shadow: none;
+}
+
+body.appearance-modern .main-view {
+  background: rgba(8, 13, 20, 0.68);
+  box-shadow: 0 16px 44px rgba(0,0,0,.22);
+}
+
+body.appearance-modern .card-button,
+body.appearance-modern .archive-card,
+body.appearance-modern .panel {
+  background: rgba(255,255,255,.055);
+  box-shadow: 0 10px 28px rgba(0,0,0,.16);
+}
+
+body.appearance-modern .star-layer {
+  opacity: .72;
+}
+
+body.appearance-ancient {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+body.appearance-ancient .star-layer {
+  background:
+    radial-gradient(ellipse at 24% 20%, rgba(255,225,170,.12), transparent 34%),
+    linear-gradient(120deg, rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(135deg, var(--bg-deep), var(--bg-main));
+  background-size: 100% 100%, 34px 34px, 100% 100%;
+}
+
+body.appearance-ancient .sidebar,
+body.appearance-ancient .main-view,
+body.appearance-ancient .modal,
+body.appearance-ancient .panel,
+body.appearance-ancient .archive-card,
+body.appearance-ancient .card-button,
+body.appearance-ancient .list-row {
+  border-width: 1px !important;
+  border-radius: var(--surface-radius, 12px) !important;
+}
+
+body.appearance-ancient .sidebar,
+body.appearance-ancient .main-view,
+body.appearance-ancient .modal {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.045), transparent 42%),
+    var(--panel-bg);
+}
+
+body.appearance-ancient .brand-plate {
+  width: auto;
+  min-height: 112px;
+  clip-path: none;
+  border: 1px solid var(--line);
+  border-radius: 12px 28px 12px 28px;
+  color: var(--text-dark);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.32), transparent 44%),
+    var(--accent);
+  font-size: 28px;
+}
+
+body.appearance-ancient .topbar {
+  clip-path: none;
+  border: 1px solid var(--line);
+  border-radius: 12px 30px 12px 30px;
+  color: var(--text-dark);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.28), transparent 48%),
+    var(--accent);
+}
+
+body.appearance-ancient .action,
+body.appearance-ancient .project-pill,
+body.appearance-ancient .side-add {
+  border-radius: var(--button-radius, 8px);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.2), transparent 44%),
+    var(--accent);
+  box-shadow: 0 8px 20px rgba(0,0,0,.18);
+}
+
+body.appearance-ancient .ghost-action,
+body.appearance-ancient .card-button,
+body.appearance-ancient .archive-card,
+body.appearance-ancient .panel {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.04), transparent 44%),
+    rgba(0,0,0,.14);
 }
