@@ -76,22 +76,21 @@
         <header class="forum-hero compact-hero">
           <div>
             <span class="overline">R.O.A. FORUM</span>
-            <h1>Comunidad</h1>
+            <h1>COMMUNITY</h1>
           </div>
-          <button class="action" type="button" data-action="create-forum-post">+ Nuevo post</button>
         </header>
         <section class="forum-filters">
           ${[
-            ["recent", "Recientes"],
-            ["popular", "Populares"],
-            ["commented", "Comentadas"],
-            ["saved", "Guardadas"],
-            ["mine", "Mias"]
+            ["recent", "Recent"],
+            ["popular", "Popular"],
+            ["saved", "Saved"],
+            ["mine", "My Posts"]
           ].map(([key, label]) => `<button class="ghost-action ${lastFilters.filter === key ? "active" : ""}" data-action="open-forum" data-filter="${key}">${label}</button>`).join("")}
           <input id="forumSearch" placeholder="Buscar" value="${UI.escape(lastFilters.q || "")}">
+          <button class="action" type="button" data-action="create-forum-post">+ Nuevo post</button>
         </section>
         <section class="forum-feed">
-          ${posts.map((post) => renderPostCard(post, user)).join("") || `<article class="empty-state"><div><h2>Sin publicaciones</h2><p>Crea un post o publica un documento.</p></div></article>`}
+          ${posts.map((post) => renderPostCard(post, user)).join("") || `<article class="empty-state"><div><h2>NO POSTS</h2><p>BE THE FIRST TO POST SOMETHING</p></div></article>`}
         </section>
         <div class="forum-load-more">${hasMorePosts ? `<button class="ghost-action" type="button" data-action="load-more-forum">Cargar mas</button>` : ""}</div>
       </section>
@@ -172,9 +171,9 @@
         <div class="tag-list">${(post.tags || []).map((tag) => `<span class="pill-mini">${UI.escape(tag)}</span>`).join("")}</div>
         <footer class="forum-card-footer">
           <span>${UI.formatDate(post.createdAt)}</span>
+          <button data-action="save-forum-post" data-post-id="${post.id}" type="button">${post.saved ? "Saved" : "Save"}</button>
+          <button data-action="open-forum-post" data-post-id="${post.id}" type="button">Comment</button>
           <button class="${post.liked ? "liked" : ""}" data-action="vote-forum" data-target-type="post" data-target-id="${post.id}" data-vote-type="up" type="button">Like ${post.upvotes || 0}</button>
-          <button data-action="open-forum-post" data-post-id="${post.id}" type="button">${post.commentsCount || 0} comentarios</button>
-          <button data-action="save-forum-post" data-post-id="${post.id}" type="button">${post.saved ? "Guardado" : "Guardar"}</button>
         </footer>
       </article>
     `;

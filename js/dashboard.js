@@ -66,11 +66,7 @@
           <label class="field">Nombre<input name="name" required placeholder="Personajes, Capítulos, Lugares..."></label>
           <label class="field">Tipo de archivo
             <select name="fileType">
-              <option value="character">Personaje</option>
-              <option value="world">Mundo / Lugar</option>
-              <option value="organization">Organizacion / Faccion</option>
-              <option value="idea">Idea</option>
-              <option value="generic">Generico</option>
+              <option value="data">Archivo de Datos</option>
             </select>
           </label>
           <label class="field">Color<input name="color" type="color" value="#ffd800"></label>
@@ -90,7 +86,7 @@
         action: "open-custom-module",
         locked: false,
         visible: true,
-        fileType: values.fileType,
+        fileType: "data",
         color: values.color,
         description: values.description,
         order: Number(values.order || 100)
@@ -112,7 +108,7 @@
         <label class="field">Color<input name="color" type="color" value="${UI.escape(module.color || "#ffd800")}"></label>
         <label class="field">Orden<input name="order" type="number" value="${Number(module.order || 100)}"></label>
         <label class="field">Visible<select name="visible"><option value="true">Si</option><option value="false" ${module.visible === false ? "selected" : ""}>No</option></select></label>
-        ${module.locked ? "" : `<label class="field">Tipo de archivo<input name="fileType" value="${UI.escape(module.fileType || "generic")}"></label>`}
+        ${module.locked ? "" : `<label class="field">Tipo de archivo<select name="fileType"><option value="data" ${(module.fileType || "data") === "data" ? "selected" : ""}>Archivo de Datos</option></select></label>`}
         <label class="field">Descripcion<textarea name="description">${UI.escape(module.description || "")}</textarea></label>
         <button class="action" type="submit">Guardar</button>
       </form>
@@ -125,7 +121,7 @@
       module.order = Number(values.order || module.order || 100);
       module.visible = values.visible === "true";
       module.description = values.description;
-      if (!module.locked) module.fileType = values.fileType || module.fileType || "generic";
+      if (!module.locked) module.fileType = "data";
       window.ROA.App.save();
       window.ROA.App.render();
       openCustomizer();
@@ -148,7 +144,7 @@
     const project = UI.currentProject();
     const module = project && project.dashboardModules.find((item) => item.id === moduleId);
     if (!module) return;
-    window.ROA.Files.renderCollection(module.fileType || "generic", module.name, module.description || "Modulo personalizado.", module.id);
+    window.ROA.Files.renderCollection(module.fileType || "data", module.name, module.description || "Modulo personalizado.", module.id);
   }
 
   window.ROA = window.ROA || {};

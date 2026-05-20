@@ -3,12 +3,10 @@
 
   const typeLabels = {
     text: "Archivo de texto",
-    character: "Archivo de personaje",
-    world: "Archivo de mundo / planeta",
-    organization: "Archivo de organizacion",
-    idea: "Archivo de idea",
-    generic: "Archivo generico"
+    data: "Archivo de Datos"
   };
+
+  const structuredTypes = new Set(["data", "generic", "character", "world", "organization", "idea"]);
 
   function defaultDataFor(type) {
     if (type === "character") {
@@ -30,7 +28,8 @@
     const project = UI.currentProject();
     if (!project) return UI.renderWelcome();
     const canEdit = window.ROA.Permissions.canEdit(project);
-    const files = window.ROA.Permissions.filterFiles(project, project.files.filter((file) => !file.archived && (!type || file.type === type) && (!moduleId || file.dashboardModuleId === moduleId || file.type === type)));
+    const matchesType = (file) => !type || (type === "data" ? structuredTypes.has(file.type) : file.type === type);
+    const files = window.ROA.Permissions.filterFiles(project, project.files.filter((file) => !file.archived && matchesType(file) && (!moduleId || file.dashboardModuleId === moduleId || matchesType(file))));
     document.querySelector("#mainView").innerHTML = `
       <section class="view-header">
         <div>
@@ -69,25 +68,11 @@
       window.ROA.Permissions.accessScreen(project);
       return;
     }
-    if (file.type === "character") {
-      window.ROA.Characters.renderCharacter(fileId);
-      return;
-    }
-    if (file.type === "text" || file.type === "generic") {
+    if (file.type === "text") {
       renderTextEditor(file);
       return;
     }
-    if (file.type === "world") {
-      renderStructuredEditor(file, worldSchema(), "Mundo / Planeta");
-      return;
-    }
-    if (file.type === "organization") {
-      renderOrganization(file);
-      return;
-    }
-    if (file.type === "idea") {
-      renderIdea(file);
-    }
+    renderDataFileEditor(file);
   }
 
   function commonHeader(file, label) {
@@ -147,6 +132,36 @@
     document.querySelector("#fileContent").addEventListener("input", (event) => {
       window.ROA.State.markDirty(file.id);
     });
+  }
+
+  function renderDataFileEditor(file) {
+    file.data = file.data || {};
+    file.internalSections = file.internalSections && file.internalSections.length
+      ? file.internalSections
+      : Storage.defaultInternalSections("data");
+    const legacy = Object.assign({}, file.data || {});
+    delete legacy.description;
+    delete legacy.activeInternalSectionId;
+    document.querySelector("#mainView").innerHTML = `
+      ${commonHeader(file, "Archivo de Datos")}
+      ${renderMetaFields(file)}
+      <section class="panel data-file-panel">
+        <div class="view-header compact">
+          <h3>Datos principales</h3>
+          <div class="inline-actions">
+            <button class="ghost-action" type="button" data-action="add-internal-section" data-file-id="${file.id}">+ Nueva seccion</button>
+          </div>
+        </div>
+        <label class="field">Descripcion<textarea id="dataFileDescription">${UI.escape(file.data.description || "")}</textarea></label>
+        ${Object.keys(legacy).length ? `
+          <details class="docs-details">
+            <summary>Datos heredados conservados</summary>
+            <textarea id="legacyDataJson">${UI.escape(JSON.stringify(legacy, null, 2))}</textarea>
+          </details>
+        ` : ""}
+        ${renderCustomSections(file)}
+      </section>
+    `;
   }
 
   let saveTimer = null;
@@ -255,11 +270,15 @@
     const project = UI.currentProject();
     if (!project) return;
     if (!window.ROA.Permissions.canEdit(project)) return UI.toast("No tienes permiso para crear archivos.");
+    const visibleDefaultType = structuredTypes.has(defaultType) ? "data" : (defaultType || "data");
     const html = `
       <form id="createFileForm" class="form-grid one">
         <label class="field">Tipo
           <select name="type">
-            ${Object.entries(typeLabels).map(([key, label]) => `<option value="${key}" ${defaultType === key ? "selected" : ""}>${label}</option>`).join("")}
+            ${[
+              ["text", "Documento"],
+              ["data", "Archivo de Datos"]
+            ].map(([key, label]) => `<option value="${key}" ${visibleDefaultType === key ? "selected" : ""}>${label}</option>`).join("")}
           </select>
         </label>
         <label class="field">Titulo<input name="title" required value="${UI.escape(title || "")}"></label>
@@ -300,7 +319,7 @@
         ,
         visibility: values.visibility || "inherit",
         dashboardModuleId: moduleId || null,
-        internalSections: Storage.defaultInternalSections(values.type)
+        internalSections: Storage.defaultInternalSections(values.type === "data" ? "data" : values.type)
       };
       if (window.ROA.Api && window.ROA.Api.serverMode) {
         try {
@@ -367,11 +386,24 @@
     const file = project && project.files.find((item) => item.id === fileId);
     if (!file) return;
     saveCommon(file);
-    if (file.type === "text" || file.type === "generic") {
+    if (file.type === "text") {
       const contentNode = document.querySelector("#fileContent");
       file.content = window.ROA.Forum && window.ROA.Forum.safeHtml ? window.ROA.Forum.safeHtml(contentNode.innerHTML) : contentNode.innerHTML;
       file.data = file.data || {};
       file.data.notes = document.querySelector("#fileNotes").value;
+    } else if (file.type === "data" || file.type === "generic" || file.type === "character" || file.type === "world" || file.type === "organization" || file.type === "idea") {
+      file.data = file.data || {};
+      const description = document.querySelector("#dataFileDescription");
+      if (description) file.data.description = description.value;
+      const legacy = document.querySelector("#legacyDataJson");
+      if (legacy) {
+        try {
+          const parsed = JSON.parse(legacy.value || "{}");
+          Object.assign(file.data, parsed, { description: file.data.description, activeInternalSectionId: file.data.activeInternalSectionId });
+        } catch (error) {
+          UI.toast("Datos heredados JSON invalido. No se guardo esa parte.");
+        }
+      }
     } else if (file.type === "world" || file.type === "organization") {
       file.data = file.data || {};
       UI.qsa("[data-path]", document.querySelector("#mainView")).forEach((input) => {
@@ -776,7 +808,7 @@
     const tag = document.querySelector("#searchTag").value;
     const favorite = document.querySelector("#searchFavorite").value;
     const results = window.ROA.Permissions.filterFiles(project, project.files).filter((file) => {
-      if (type && file.type !== type) return false;
+      if (type && (type === "data" ? !structuredTypes.has(file.type) : file.type !== type)) return false;
       if (section && file.sectionId !== section) return false;
       if (tag && !(file.tags || []).includes(tag)) return false;
       if (favorite && !file.favorite) return false;

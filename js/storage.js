@@ -182,6 +182,11 @@
         fields: []
       }));
     }
+    if (type === "data") {
+      return [
+        { id: uid("internal"), name: "General", locked: true, order: 1, fields: [] }
+      ];
+    }
     return [
       { id: uid("internal"), name: "Notas", locked: true, order: 1, fields: [] },
       { id: uid("internal"), name: "Campos personalizados", locked: false, order: 2, fields: [] }

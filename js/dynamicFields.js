@@ -2,19 +2,22 @@
   const fieldTypes = [
     ["short", "Texto corto"],
     ["long", "Texto largo"],
-    ["number", "Número"],
+    ["number", "Numero"],
     ["list", "Lista"],
     ["checkbox", "Checkbox"],
     ["select", "Selector"],
     ["date", "Fecha"],
     ["color", "Color"],
     ["url", "URL"],
-    ["relation", "Relación con otro archivo"]
+    ["image", "Imagen"],
+    ["tags", "Etiquetas"],
+    ["relation", "Relacion con otro archivo"]
   ];
 
   function defaultSections(type) {
-    if (type === "character") return ["General", "Descripción", "Habilidades", "Clasificación", "Estadísticas", "Relaciones", "Imágenes"];
-    if (type === "world") return ["General", "Geografía", "Flora/Fauna", "Civilizaciones", "Energía"];
+    if (type === "data") return ["General"];
+    if (type === "character") return ["General", "Descripcion", "Habilidades", "Clasificacion", "Estadisticas", "Relaciones", "Imagenes"];
+    if (type === "world") return ["General", "Geografia", "Flora/Fauna", "Civilizaciones", "Energia"];
     if (type === "organization") return ["General", "Miembros", "Sectores", "Recursos", "Relaciones"];
     if (type === "idea") return ["General", "Desarrollo", "Referencias"];
     return ["General", "Notas"];
@@ -42,7 +45,7 @@
       <section class="internal-tabs">
         ${sections.map((section) => `
           <button class="tab-button ${section.id === active.id ? "active" : ""}" type="button" data-action="switch-internal-section" data-file-id="${file.id}" data-internal-section-id="${section.id}">
-            ${window.ROA.UI.escape(section.name)} ${section.locked ? "" : `<span data-action="delete-internal-section" data-file-id="${file.id}" data-internal-section-id="${section.id}">×</span>`}
+            ${window.ROA.UI.escape(section.name)} ${section.locked ? "" : `<span data-action="delete-internal-section" data-file-id="${file.id}" data-internal-section-id="${section.id}">x</span>`}
           </button>
         `).join("")}
         <button class="tab-button" type="button" data-action="add-internal-section" data-file-id="${file.id}">+</button>
@@ -56,7 +59,7 @@
           </div>
         </div>
         <div class="form-grid dynamic-field-grid">
-          ${(active.fields || []).map((field) => renderField(file, active, field)).join("") || `<p class="meta">Sin campos personalizados en esta sección.</p>`}
+          ${(active.fields || []).map((field) => renderField(file, active, field)).join("") || `<p class="meta">Sin campos personalizados en esta seccion.</p>`}
         </div>
       </article>
     `;
@@ -65,17 +68,19 @@
   function renderField(file, section, field) {
     const UI = window.ROA.UI;
     const value = field.value == null ? "" : field.value;
-    const remove = `<button class="mini-danger" type="button" data-action="delete-custom-field" data-file-id="${file.id}" data-internal-section-id="${section.id}" data-field-id="${field.id}">×</button>`;
+    const remove = `<button class="mini-danger" type="button" data-action="delete-custom-field" data-file-id="${file.id}" data-internal-section-id="${section.id}" data-field-id="${field.id}">x</button>`;
     const attrs = `data-custom-field="${field.id}" data-internal-section-id="${section.id}"`;
     if (field.kind === "long") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<textarea ${attrs}>${UI.escape(value)}</textarea></label>`;
     if (field.kind === "number") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<input ${attrs} type="number" value="${UI.escape(value)}"></label>`;
     if (field.kind === "list") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<textarea ${attrs} placeholder="Un item por linea">${UI.escape(Array.isArray(value) ? value.join("\n") : value)}</textarea></label>`;
     if (field.kind === "checkbox") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<select ${attrs}><option value="false">No</option><option value="true" ${value === true || value === "true" ? "selected" : ""}>Si</option></select></label>`;
-    if (field.kind === "select") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<select ${attrs}>${String(field.options || value || "Opción").split(/[,\n]/).map((option) => `<option value="${UI.escape(option.trim())}" ${option.trim() === value ? "selected" : ""}>${UI.escape(option.trim())}</option>`).join("")}</select></label>`;
+    if (field.kind === "select") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<select ${attrs}>${String(field.options || value || "Opcion").split(/[,\n]/).map((option) => `<option value="${UI.escape(option.trim())}" ${option.trim() === value ? "selected" : ""}>${UI.escape(option.trim())}</option>`).join("")}</select></label>`;
     if (field.kind === "date") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<input ${attrs} type="date" value="${UI.escape(value)}"></label>`;
     if (field.kind === "color") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<input ${attrs} type="color" value="${UI.escape(value || "#ffd800")}"></label>`;
     if (field.kind === "url") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<input ${attrs} type="url" value="${UI.escape(value)}"></label>`;
-    if (field.kind === "relation") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<select ${attrs}><option value="">Sin relación</option>${window.ROA.UI.currentProject().files.map((item) => `<option value="${item.id}" ${item.id === value ? "selected" : ""}>${UI.escape(item.title)}</option>`).join("")}</select></label>`;
+    if (field.kind === "image") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<input ${attrs} placeholder="URL o ID de imagen" value="${UI.escape(value)}"></label>`;
+    if (field.kind === "tags") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<input ${attrs} placeholder="etiqueta, etiqueta" value="${UI.escape(Array.isArray(value) ? value.join(", ") : value)}"></label>`;
+    if (field.kind === "relation") return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<select ${attrs}><option value="">Sin relacion</option>${window.ROA.UI.currentProject().files.map((item) => `<option value="${item.id}" ${item.id === value ? "selected" : ""}>${UI.escape(item.title)}</option>`).join("")}</select></label>`;
     return `<label class="field dynamic-field">${remove}${UI.escape(field.label)}<input ${attrs} value="${UI.escape(value)}"></label>`;
   }
 
@@ -85,6 +90,7 @@
       const field = section && (section.fields || []).find((item) => item.id === input.dataset.customField);
       if (!field) return;
       if (field.kind === "list") field.value = input.value.split(/\n+/).map((item) => item.trim()).filter(Boolean);
+      else if (field.kind === "tags") field.value = input.value.split(/[,\n]+/).map((item) => item.trim()).filter(Boolean);
       else if (field.kind === "checkbox") field.value = input.value === "true";
       else field.value = input.value;
     });

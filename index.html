@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/forum.css">
   <link rel="stylesheet" href="css/docs.css">
   <link rel="stylesheet" href="css/contextMenu.css">
+  <link rel="stylesheet" href="css/roa-reference.css">
 </head>
 <body class="appearance-og theme-gold" data-appearance="og" data-theme="gold" data-background="spaceAnimated">
   <div class="star-layer" aria-hidden="true"></div>
@@ -18,11 +19,7 @@
   <div id="appShell" class="app-shell">
     <aside class="sidebar" aria-label="Proyectos">
       <button class="sidebar-toggle" data-action="toggle-sidebar" type="button" title="Minimizar barra">☰</button>
-      <button class="brand-plate" data-action="open-forum" type="button" title="Menu principal">
-        <span>RAT</span>
-        <span>Ontological</span>
-        <span>Archive</span>
-      </button>
+      <button class="forum-side-button" data-action="open-forum" type="button">FORUM</button>
       <div class="side-scroll">
         <div id="projectList" class="project-list"></div>
       </div>
@@ -30,16 +27,28 @@
     </aside>
 
     <header class="topbar">
+      <button class="brand-plate topbar-brand" data-action="open-forum" type="button" title="Menu principal">
+        <span>RAT</span>
+        <span>Ontological</span>
+        <span>Archive</span>
+      </button>
+      <span class="topbar-chevron" aria-hidden="true"></span>
+      <button class="icon-button gear-button" data-action="open-settings" type="button" title="Configuracion">
+        <span class="gear-shape" aria-hidden="true"></span>
+        <span class="sr-only">Configuracion</span>
+      </button>
+      <button class="icon-button social-button" data-action="open-social" type="button" title="Social">
+        <span class="social-shape" aria-hidden="true"></span>
+        <span class="sr-only">Social</span>
+      </button>
+      <button class="search-icon-button" data-action="open-search" type="button" title="Buscar"><span aria-hidden="true"></span></button>
+      <input id="globalSearchInput" class="topbar-search" type="search" placeholder="Buscar">
       <div class="topbar-title">
         <span class="overline">R.O.A. ACTIVE REGISTRY</span>
         <strong id="activeProjectTitle">Sin proyecto activo</strong>
       </div>
       <div class="topbar-actions">
         <button id="topbarUsername" class="username-button" data-action="open-profile" type="button">Usuario</button>
-        <button class="icon-button gear-button" data-action="open-settings" type="button" title="Configuracion">
-          <span class="gear-shape" aria-hidden="true"></span>
-          <span class="sr-only">Configuracion</span>
-        </button>
         <button id="profileButton" class="profile-button" data-action="open-profile" type="button" title="Perfil">
           <span id="profileInitials">ROA</span>
         </button>

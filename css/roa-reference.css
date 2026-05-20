@@ -1,0 +1,815 @@
+:root {
+  --roa-bg: #020b14;
+  --roa-panel: #041a2b;
+  --roa-panel-2: #06243a;
+  --roa-sidebar: #021625;
+  --roa-accent: #ffd800;
+  --roa-accent-2: #fff06a;
+  --roa-text: #edf6ff;
+  --roa-muted: #9fb6cc;
+  --roa-border: #ffd800;
+  --roa-border-soft: rgba(255, 216, 0, 0.48);
+  --roa-blue-border: #99c8ee;
+  --roa-danger: #ff4f4f;
+  --roa-success: #52ff9a;
+  --roa-shadow: rgba(0, 0, 0, 0.34);
+  --bg-main: var(--roa-bg);
+  --bg-deep: #00070d;
+  --panel-bg: rgba(2, 22, 37, 0.96);
+  --panel-bg-2: rgba(4, 31, 50, 0.94);
+  --accent: var(--roa-accent);
+  --accent-soft: var(--roa-accent-2);
+  --accent-hard: #caa600;
+  --text-main: var(--roa-text);
+  --text-muted: var(--roa-muted);
+  --text-dark: #001f33;
+  --line: var(--roa-border);
+  --glow: rgba(255, 216, 0, 0.12);
+  --shadow: var(--roa-shadow);
+  --input-bg: rgba(0, 18, 31, 0.96);
+}
+
+html,
+body {
+  font-family: system-ui, "Segoe UI", Arial, sans-serif;
+  background: #000;
+}
+
+body {
+  overflow: hidden;
+}
+
+.star-layer {
+  background:
+    linear-gradient(rgba(0, 10, 18, .18), rgba(0, 10, 18, .22)),
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,.95) 0 1px, transparent 1.4px),
+    radial-gradient(circle at 75% 22%, rgba(255,255,255,.7) 0 1px, transparent 1.2px),
+    radial-gradient(circle at 40% 72%, rgba(190,210,255,.65) 0 1px, transparent 1.3px),
+    radial-gradient(ellipse at 62% 64%, rgba(120, 95, 210, .42), transparent 34%),
+    linear-gradient(135deg, #07101f 0%, #061b2b 48%, #12182b 100%);
+  background-size: 100% 100%, 180px 180px, 260px 240px, 340px 280px, 100% 100%, 100% 100%;
+  animation: none !important;
+}
+
+body.appearance-modern .star-layer,
+body.appearance-ancient .star-layer {
+  background:
+    linear-gradient(rgba(0, 10, 18, .18), rgba(0, 10, 18, .22)),
+    radial-gradient(circle at 20% 30%, rgba(255,255,255,.95) 0 1px, transparent 1.4px),
+    radial-gradient(circle at 75% 22%, rgba(255,255,255,.7) 0 1px, transparent 1.2px),
+    radial-gradient(circle at 40% 72%, rgba(190,210,255,.65) 0 1px, transparent 1.3px),
+    radial-gradient(ellipse at 62% 64%, rgba(120, 95, 210, .42), transparent 34%),
+    linear-gradient(135deg, #07101f 0%, #061b2b 48%, #12182b 100%);
+  background-size: 100% 100%, 180px 180px, 260px 240px, 340px 280px, 100% 100%, 100% 100%;
+  opacity: 1;
+}
+
+.app-shell {
+  grid-template-columns: 164px minmax(0, 1fr);
+  grid-template-rows: 74px minmax(0, 1fr);
+}
+
+.topbar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: 214px 52px 60px 58px 54px minmax(220px, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 74px;
+  margin: 24px 0 0;
+  padding: 0 28px 0 0;
+  clip-path: polygon(0 0, calc(100% - 50px) 0, 100% 50%, calc(100% - 50px) 100%, 0 100%);
+  color: var(--text-dark);
+  background: var(--roa-accent);
+  box-shadow: none;
+}
+
+.topbar-brand {
+  width: 214px;
+  min-height: 74px;
+  padding: 8px 48px 8px 22px;
+  clip-path: polygon(0 0, calc(100% - 52px) 0, 100% 50%, calc(100% - 52px) 100%, 0 100%);
+  border: 0;
+  border-radius: 0;
+  color: #002947;
+  background: var(--roa-accent);
+  font-size: 20px;
+  line-height: 1.05;
+  box-shadow: none;
+}
+
+.topbar-chevron {
+  width: 52px;
+  height: 74px;
+  margin-left: -10px;
+  clip-path: polygon(0 0, 68% 0, 100% 50%, 68% 100%, 0 100%, 32% 50%);
+  background: #02233a;
+}
+
+.topbar-title {
+  display: none;
+}
+
+.topbar-actions {
+  grid-column: 7 / 9;
+  justify-content: end;
+  gap: 12px;
+}
+
+.topbar-search {
+  min-height: 48px;
+  border: 4px solid #021f36;
+  border-radius: 18px;
+  color: #021f36;
+  background: rgba(255, 216, 0, 0.24);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.topbar-search::placeholder {
+  color: rgba(2, 31, 54, 0.65);
+}
+
+.search-icon-button {
+  width: 50px;
+  height: 50px;
+  border: 0;
+  background: transparent;
+  position: relative;
+}
+
+.search-icon-button span::before {
+  content: "";
+  position: absolute;
+  inset: 9px 14px 16px 9px;
+  border: 5px solid #000;
+  border-radius: 50%;
+}
+
+.search-icon-button span::after {
+  content: "";
+  position: absolute;
+  width: 25px;
+  height: 6px;
+  right: 4px;
+  bottom: 8px;
+  border-radius: 8px;
+  background: #000;
+  transform: rotate(45deg);
+}
+
+.icon-button,
+.gear-button,
+.social-button {
+  width: 54px;
+  height: 54px;
+  border: 0;
+  color: #001f33;
+  background: transparent;
+}
+
+.gear-shape {
+  width: 48px;
+  height: 48px;
+  background: #000;
+}
+
+.social-shape {
+  position: relative;
+  display: block;
+  width: 50px;
+  height: 50px;
+  border: 4px solid #000;
+  border-radius: 50%;
+}
+
+.social-shape::before,
+.social-shape::after {
+  content: "";
+  position: absolute;
+  border: 4px solid #000;
+  border-radius: 999px;
+}
+
+.social-shape::before {
+  width: 11px;
+  height: 11px;
+  top: 9px;
+  left: 17px;
+  background: #000;
+}
+
+.social-shape::after {
+  width: 25px;
+  height: 13px;
+  left: 9px;
+  bottom: 9px;
+}
+
+.username-button {
+  min-width: 162px;
+  min-height: 50px;
+  border: 4px solid #02233a;
+  border-radius: 18px;
+  color: #001f33;
+  background: transparent;
+  font-size: 22px;
+  text-transform: uppercase;
+}
+
+.profile-button {
+  width: 88px;
+  height: 88px;
+  margin: -8px 10px -8px 0;
+  border: 4px solid #02233a;
+  color: #001f33;
+  background-color: #aeb4ba;
+  font-size: 11px;
+}
+
+.sidebar {
+  grid-column: 1;
+  grid-row: 2;
+  gap: 16px;
+  padding: 32px 8px 28px 14px;
+  background: var(--roa-sidebar);
+  border-right: 0;
+  backdrop-filter: none;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  left: 12px;
+  top: 162px;
+  z-index: 3;
+  width: 12px;
+  height: 252px;
+  border: 0;
+  border-radius: 999px;
+  color: transparent;
+  background: var(--roa-accent);
+}
+
+.sidebar-toggle::after {
+  content: "";
+  position: absolute;
+  inset: 86px 2px;
+  border-radius: 999px;
+  background: #02233a;
+}
+
+.forum-side-button {
+  width: 154px;
+  min-height: 110px;
+  border: 3px solid var(--roa-blue-border);
+  border-radius: 0 54px 54px 0;
+  color: #002947;
+  background: var(--roa-accent);
+  font-size: 34px;
+  font-weight: 1000;
+  text-align: left;
+  padding: 0 12px;
+}
+
+.side-scroll {
+  padding: 20px 0 4px 28px;
+}
+
+.project-list {
+  gap: 12px;
+}
+
+.project-pill,
+.project-pill.active {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 114px;
+  min-height: 108px;
+  border: 0;
+  border-radius: 0 28px 28px 0;
+  padding: 10px;
+  color: #001f33;
+  background: var(--roa-accent);
+  box-shadow: none;
+  text-align: center;
+  transform: none;
+}
+
+.project-pill.active {
+  width: 134px;
+  border-radius: 0 50px 50px 0;
+}
+
+.project-thumb {
+  display: grid;
+  place-items: center;
+  width: 86px;
+  height: 86px;
+  border: 3px solid #3b4047;
+  border-radius: 14px;
+  background: #b5b5b5;
+  color: #111;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.project-pill-text,
+.project-pill small {
+  display: none;
+}
+
+.side-add {
+  width: 142px;
+  min-height: 104px;
+  border: 0;
+  border-radius: 0 24px 24px 0;
+  color: #002947;
+  background: var(--roa-accent);
+  box-shadow: none;
+  font-size: 44px;
+}
+
+.main-view {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 18px 30px 40px 28px;
+  padding: 22px;
+  border: 1px solid var(--roa-border);
+  border-radius: 12px;
+  background: rgba(1, 19, 33, 0.94);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+.view-header,
+.forum-hero,
+.panel,
+.archive-card,
+.card-button,
+.modal,
+.empty-state {
+  border: 1px solid var(--roa-border);
+  border-radius: 10px;
+  background: rgba(2, 22, 37, 0.95);
+  box-shadow: none;
+}
+
+.view-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--roa-border);
+}
+
+.view-header h1,
+.view-header h2,
+.forum-hero h1,
+.empty-state h1,
+.empty-state h2,
+.modal h2 {
+  color: var(--roa-accent);
+  font-weight: 1000;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.view-header p,
+.meta,
+.forum-title-button span {
+  color: var(--roa-muted);
+}
+
+.action,
+.danger-action,
+.ghost-action,
+.tab-button,
+.settings-tab,
+.forum-card-footer button,
+.context-menu button {
+  min-height: 38px;
+  border: 1px solid var(--roa-border);
+  border-radius: 14px;
+  padding: 7px 14px;
+  font-weight: 900;
+  box-shadow: none;
+}
+
+.action {
+  color: #001f33;
+  background: var(--roa-accent);
+}
+
+.ghost-action,
+.tab-button,
+.settings-tab,
+.forum-card-footer button {
+  color: var(--roa-text);
+  background: rgba(3, 37, 61, 0.8);
+}
+
+.ghost-action.active,
+.tab-button.active {
+  color: #001f33;
+  background: var(--roa-accent);
+}
+
+.danger-action {
+  color: #fff;
+  border-color: var(--roa-danger);
+  background: #9a1e28;
+}
+
+input,
+textarea,
+select,
+.docs-editor,
+.docs-reader {
+  border: 1px solid var(--roa-blue-border);
+  border-radius: 12px;
+  color: var(--roa-text);
+  background: rgba(0, 18, 31, 0.96);
+  box-shadow: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.docs-editor:focus {
+  border-color: var(--roa-accent);
+  box-shadow: 0 0 0 2px rgba(255, 216, 0, .22);
+}
+
+.dashboard-grid,
+.card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+
+.card-button,
+.archive-card {
+  min-height: 126px;
+  padding: 16px;
+  border-color: var(--roa-border-soft);
+}
+
+.card-button strong,
+.archive-card strong {
+  color: var(--roa-accent);
+}
+
+.list-row,
+.tree-item,
+.tag-chip {
+  border: 1px solid rgba(153, 200, 238, .82);
+  border-left: 8px solid var(--roa-accent);
+  border-radius: 16px;
+  background: rgba(0, 18, 31, 0.9);
+}
+
+.forum-shell {
+  gap: 14px;
+}
+
+.forum-hero {
+  min-height: 124px;
+  align-items: flex-end;
+  padding: 20px;
+}
+
+.forum-hero .overline {
+  color: var(--roa-blue-border);
+  font-size: 20px;
+}
+
+.forum-hero h1 {
+  font-size: clamp(44px, 5vw, 70px);
+  line-height: .9;
+}
+
+.forum-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 164px)) 54px minmax(220px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.forum-filters::before {
+  content: "";
+  grid-column: 5;
+  width: 42px;
+  height: 42px;
+  justify-self: center;
+  background:
+    radial-gradient(circle at 36% 36%, transparent 0 11px, #000 12px 17px, transparent 18px),
+    linear-gradient(45deg, transparent 0 56%, #000 57% 68%, transparent 69%);
+}
+
+.forum-filters input {
+  grid-column: 6;
+  min-height: 48px;
+  border: 4px solid #042f55;
+  border-radius: 24px;
+  font-size: 26px;
+}
+
+.forum-filters .action {
+  grid-column: 7;
+}
+
+.forum-feed {
+  gap: 26px;
+}
+
+.forum-card {
+  position: relative;
+  min-height: 238px;
+  border: 2px solid rgba(220, 235, 250, .9);
+  border-left: 14px solid var(--roa-accent);
+  border-radius: 22px;
+  padding: 18px 22px 58px;
+  background: rgba(0, 18, 31, 0.96);
+}
+
+.forum-author {
+  color: var(--roa-text);
+  text-transform: uppercase;
+}
+
+.forum-avatar {
+  width: 42px;
+  height: 42px;
+  border: 3px solid #3b4047;
+  color: #001f33;
+  background-color: #b9b9b9;
+}
+
+.forum-title-button strong {
+  color: var(--roa-accent);
+  font-size: 30px;
+  text-transform: uppercase;
+}
+
+.forum-card-footer {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 14px;
+}
+
+.forum-card-footer span:first-child {
+  margin-left: auto;
+  order: 9;
+  color: var(--roa-text);
+  font-weight: 900;
+}
+
+.empty-state {
+  min-height: 52vh;
+  border-style: dashed;
+  border-width: 2px;
+}
+
+.forum-feed .empty-state h2,
+.forum-feed .empty-state h1 {
+  font-size: clamp(72px, 9vw, 150px);
+  line-height: .9;
+}
+
+.forum-feed .empty-state h2::after,
+.forum-feed .empty-state h1::after {
+  content: " /YET/";
+  display: block;
+  margin-top: 26px;
+  font-size: .48em;
+  font-style: italic;
+}
+
+.forum-feed .empty-state p {
+  color: var(--roa-text);
+  font-size: 28px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.modal-root {
+  background: rgba(0, 0, 0, .22);
+}
+
+.modal {
+  width: min(1240px, 78vw);
+  border-color: var(--roa-border);
+  background: rgba(2, 22, 37, 0.96);
+}
+
+.modal.small {
+  width: min(560px, 94vw);
+}
+
+.modal header {
+  justify-content: center;
+  border-bottom: 2px solid var(--roa-border);
+  padding-bottom: 8px;
+}
+
+.modal h2 {
+  font-size: clamp(30px, 4vw, 50px);
+}
+
+.modal-close {
+  position: absolute;
+  right: 24px;
+  top: 18px;
+  border: 0;
+  color: var(--roa-accent);
+  background: transparent;
+  font-size: 34px;
+  font-weight: 1000;
+}
+
+.settings-layout {
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.settings-tabs {
+  gap: 10px;
+}
+
+.settings-tab {
+  min-height: 46px;
+  border-radius: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.settings-tab.active {
+  color: #001f33;
+  background: var(--roa-accent);
+}
+
+.docs-toolbar {
+  border-color: var(--roa-border-soft);
+  background: rgba(0, 18, 31, 0.96);
+  backdrop-filter: none;
+}
+
+.docs-editor,
+.docs-reader {
+  background: rgba(2, 22, 37, 0.98);
+  font-family: system-ui, "Segoe UI", Arial, sans-serif;
+}
+
+.gallery-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.gallery-card,
+.media-preview,
+.image-preview,
+.video-thumb {
+  border-color: var(--roa-border-soft);
+  background-color: rgba(0, 18, 31, 0.96);
+}
+
+.context-menu {
+  border-color: var(--roa-border);
+  background: rgba(2, 22, 37, 0.98);
+  backdrop-filter: none;
+}
+
+.toast {
+  border-left-color: var(--roa-accent);
+  background: rgba(2, 22, 37, 0.98);
+}
+
+body.sidebar-collapsed .app-shell {
+  grid-template-columns: 78px minmax(0, 1fr);
+}
+
+body.sidebar-collapsed .forum-side-button,
+body.sidebar-collapsed .project-pill,
+body.sidebar-collapsed .project-pill.active,
+body.sidebar-collapsed .side-add {
+  width: 58px;
+  min-height: 58px;
+  border-radius: 0 18px 18px 0;
+  padding: 6px;
+  font-size: 0;
+}
+
+body.sidebar-collapsed .forum-side-button::after {
+  content: "F";
+  font-size: 24px;
+}
+
+body.sidebar-collapsed .project-thumb {
+  width: 44px;
+  height: 44px;
+  font-size: 10px;
+}
+
+@media (max-width: 980px) {
+  .app-shell {
+    grid-template-columns: 92px minmax(0, 1fr);
+    grid-template-rows: 84px minmax(0, 1fr);
+  }
+
+  .topbar {
+    grid-template-columns: 150px 42px 46px 46px minmax(0, 1fr) auto;
+    gap: 6px;
+  }
+
+  .topbar-brand {
+    width: 150px;
+    font-size: 15px;
+  }
+
+  .topbar-chevron,
+  .topbar-title {
+    display: none;
+  }
+
+  .search-icon-button {
+    grid-column: 5;
+  }
+
+  .topbar-search {
+    display: none;
+  }
+
+  .topbar-actions {
+    grid-column: 6;
+  }
+
+  .username-button {
+    display: none;
+  }
+
+  .forum-filters {
+    grid-template-columns: repeat(2, minmax(110px, 1fr));
+  }
+
+  .forum-filters::before {
+    display: none;
+  }
+
+  .forum-filters input,
+  .forum-filters .action {
+    grid-column: 1 / -1;
+  }
+
+  .modal {
+    width: 94vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+body.appearance-modern .topbar,
+body.appearance-ancient .topbar {
+  clip-path: polygon(0 0, calc(100% - 50px) 0, 100% 50%, calc(100% - 50px) 100%, 0 100%);
+  border: 0;
+  border-radius: 0;
+  color: var(--text-dark);
+  background: var(--roa-accent);
+}
+
+body.appearance-modern .topbar-brand,
+body.appearance-ancient .topbar-brand {
+  clip-path: polygon(0 0, calc(100% - 52px) 0, 100% 50%, calc(100% - 52px) 100%, 0 100%);
+  border: 0;
+  border-radius: 0;
+  color: #002947;
+  background: var(--roa-accent);
+}
+
+body.appearance-modern .brand-plate,
+body.appearance-ancient .brand-plate {
+  font-family: system-ui, "Segoe UI", Arial, sans-serif;
+}
+
+body.appearance-modern .sidebar,
+body.appearance-ancient .sidebar,
+body.appearance-modern .main-view,
+body.appearance-ancient .main-view,
+body.appearance-modern .modal,
+body.appearance-ancient .modal {
+  background: rgba(2, 22, 37, 0.96);
+  backdrop-filter: none;
+}
+
+body.appearance-modern .project-pill,
+body.appearance-ancient .project-pill,
+body.appearance-modern .side-add,
+body.appearance-ancient .side-add,
+body.appearance-modern .action,
+body.appearance-ancient .action {
+  color: #001f33;
+  background: var(--roa-accent);
+}

@@ -36,11 +36,12 @@
   UI.fileTypeLabel = function (type) {
     return {
       text: "Texto",
-      character: "Personaje",
-      world: "Mundo / Planeta",
-      organization: "Organizacion",
-      idea: "Idea",
-      generic: "Generico"
+      data: "Archivo de Datos",
+      character: "Archivo de Datos",
+      world: "Archivo de Datos",
+      organization: "Archivo de Datos",
+      idea: "Archivo de Datos",
+      generic: "Archivo de Datos"
     }[type] || type || "Archivo";
   };
 
@@ -195,7 +196,8 @@
     const user = window.ROA.Permissions.currentUser();
     root.innerHTML = app.data.projects.map((project) => `
       <button class="project-pill ${project.id === app.data.activeProjectId ? "active" : ""}" type="button" data-action="select-project" data-context-type="project" data-project-id="${project.id}">
-        ${UI.escape(project.name)}
+        <span class="project-thumb" aria-hidden="true">IMG</span>
+        <span class="project-pill-text">${UI.escape(project.name)}</span>
         <small>${UI.escape(project.visibility || "private")} / ${window.ROA.Permissions.roleFor(project, user && user.id)}</small>
       </button>
     `).join("") || `<div class="meta">No hay proyectos todavia.</div>`;

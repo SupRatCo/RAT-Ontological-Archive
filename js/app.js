@@ -104,16 +104,16 @@
           window.ROA.Files.renderCollection("text", "Archivos de texto", "Bloc de notas wiki con enlaces internos.");
           break;
         case "characters":
-          window.ROA.Files.renderCollection("character", "Personajes", "Fichas completas de personajes y entidades.");
+          window.ROA.Files.renderCollection("data", "Archivos de Datos", "Registros flexibles con secciones y campos personalizados.");
           break;
         case "worlds":
-          window.ROA.Files.renderCollection("world", "Mundos / Planetas", "Planetas, dimensiones y mundos del proyecto.");
+          window.ROA.Files.renderCollection("data", "Archivos de Datos", "Registros flexibles con secciones y campos personalizados.");
           break;
         case "organizations":
-          window.ROA.Files.renderCollection("organization", "Organizaciones", "Corporaciones, fundaciones, cultos e imperios.");
+          window.ROA.Files.renderCollection("data", "Archivos de Datos", "Registros flexibles con secciones y campos personalizados.");
           break;
         case "ideas":
-          window.ROA.Files.renderCollection("idea", "Ideas", "Conceptos sin asignar y semillas narrativas.");
+          window.ROA.Files.renderCollection("data", "Archivos de Datos", "Registros flexibles con secciones y campos personalizados.");
           break;
         case "tags":
           window.ROA.Tags.renderTags();
@@ -158,6 +158,21 @@
         if (event.target.matches("[data-stat]")) {
           const label = event.target.parentElement.querySelector("strong");
           if (label) label.textContent = event.target.value;
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.target.matches("#globalSearchInput") && event.key === "Enter") {
+          event.preventDefault();
+          this.navigate("search");
+          const query = event.target.value.trim();
+          setTimeout(() => {
+            const search = UI.qs("#searchQuery");
+            if (search) {
+              search.value = query;
+              search.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+          }, 0);
         }
       });
 
@@ -331,6 +346,14 @@
           break;
         case "open-settings":
           window.ROA.Settings.openSettings();
+          break;
+        case "open-social":
+          UI.openModal("Sistema social", `
+            <section class="panel">
+              <h3>Sistema social en preparacion</h3>
+              <p class="meta">Proximamente podras agregar amigos, chatear y asignarlos a proyectos.</p>
+            </section>
+          `, { size: "small" });
           break;
         case "settings-tab":
           window.ROA.Settings.openSettings(el.dataset.settingsTab);
