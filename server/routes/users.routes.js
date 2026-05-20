@@ -1,33 +1,16 @@
 const express = require("express");
-const { run, get, all } = require("../database");
+const { query } = require("../db/pool");
 const { requireAuth } = require("../middleware/auth.middleware");
-const { avatarUpload } = require("../middleware/upload.middleware");
-const storage = require("../storage");
+const { upload } = require("../middleware/upload.middleware");
+const usersService = require("../services/users.service");
+const storageService = require("../services/storage.service");
 
 const router = express.Router();
-const now = () => new Date().toISOString();
 
-function publicUser(user) {
-  const settings = JSON.parse(user.settings_json || "{}");
-  return {
-    id: user.id,
-    username: user.username,
-    avatar: user.avatar_url || "",
-    avatar_url: user.avatar_url || "",
-    banner: settings.banner || "",
-    bio: settings.bio || "",
-    links: settings.links || "",
-    accent: settings.accent || "",
-    settings,
-    createdAt: user.created_at,
-    updatedAt: user.updated_at
-  };
-}
-
-router.get("/", requireAuth, async (_req, res, next) => {
+router.get("/me", requireAuth, async (req, res, next) => {
   try {
-    const users = await all("SELECT id, username, avatar_url, settings_json, created_at, updated_at FROM users ORDER BY username");
-    res.json({ users: users.map(publicUser) });
+    const user = await usersService.getPrivateProfile(req.user.id);
+    res.json({ ok: true, data: { user } });
   } catch (error) {
     next(error);
   }
@@ -35,56 +18,76 @@ router.get("/", requireAuth, async (_req, res, next) => {
 
 router.patch("/me", requireAuth, async (req, res, next) => {
   try {
-    const username = String(req.body.username || "").trim();
-    const settings = req.body.settings ? JSON.stringify(req.body.settings) : null;
-    if (username) {
-      const existing = await get("SELECT id FROM users WHERE lower(username) = lower(?) AND id <> ?", [username, req.user.id]);
-      if (existing) return res.status(409).json({ error: "Ese nombre de usuario ya existe." });
-      await run("UPDATE users SET username = ?, updated_at = ? WHERE id = ?", [username, now(), req.user.id]);
-    }
-    if (settings) await run("UPDATE users SET settings_json = ?, updated_at = ? WHERE id = ?", [settings, now(), req.user.id]);
-    const user = await get("SELECT * FROM users WHERE id = ?", [req.user.id]);
-    res.json({ user: publicUser(user) });
+    const user = await usersService.updateProfile(req.user.id, req.body);
+    res.json({ ok: true, data: { user } });
   } catch (error) {
     next(error);
   }
 });
 
-router.post("/me/avatar", requireAuth, avatarUpload.single("avatar"), async (req, res, next) => {
+router.post("/me/avatar", requireAuth, upload.single("file"), async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No se recibio ningun avatar." });
-    const stored = await storage.uploadFile(req.file, "avatars");
-    const avatarUrl = stored.publicUrl || `/uploads/avatars/${req.file.filename}`;
-    await run("UPDATE users SET avatar_url = ?, updated_at = ? WHERE id = ?", [avatarUrl, now(), req.user.id]);
-    const user = await get("SELECT * FROM users WHERE id = ?", [req.user.id]);
-    res.json({ user: publicUser(user) });
+    const uploaded = await storageService.uploadFile(req.file, { userId: req.user.id, mediaType: "avatar", prefix: "avatars" });
+    const user = await usersService.updateProfile(req.user.id, { avatar_url: uploaded.public_url });
+    res.json({ ok: true, data: { user, media: uploaded } });
   } catch (error) {
     next(error);
   }
 });
 
-router.post("/me/banner", requireAuth, avatarUpload.single("banner"), async (req, res, next) => {
+router.post("/me/banner", requireAuth, upload.single("file"), async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No se recibio ningun banner." });
-    const user = await get("SELECT * FROM users WHERE id = ?", [req.user.id]);
-    const settings = JSON.parse((user && user.settings_json) || "{}");
-    const stored = await storage.uploadFile(req.file, "banners");
-    settings.banner = stored.publicUrl || `/uploads/avatars/${req.file.filename}`;
-    await run("UPDATE users SET settings_json = ?, updated_at = ? WHERE id = ?", [JSON.stringify(settings), now(), req.user.id]);
-    const updated = await get("SELECT * FROM users WHERE id = ?", [req.user.id]);
-    res.json({ user: publicUser(updated) });
+    const uploaded = await storageService.uploadFile(req.file, { userId: req.user.id, mediaType: "banner", prefix: "banners" });
+    const user = await usersService.updateProfile(req.user.id, { banner_url: uploaded.public_url });
+    res.json({ ok: true, data: { user, media: uploaded } });
   } catch (error) {
     next(error);
   }
 });
 
-router.get("/:id/public", async (req, res, next) => {
+router.get("/search", requireAuth, async (req, res, next) => {
   try {
-    const user = await get("SELECT id, username, avatar_url, settings_json, created_at, updated_at FROM users WHERE id = ?", [req.params.id]);
-    if (!user) return res.status(404).json({ error: "User not found" });
-    const posts = await all("SELECT id, title, summary, created_at FROM forum_posts WHERE user_id = ? AND visibility = 'public' ORDER BY created_at DESC", [req.params.id]);
-    const projects = await all("SELECT id, name, description, created_at FROM projects WHERE owner_id = ? AND visibility = 'public' ORDER BY created_at DESC", [req.params.id]);
-    res.json({ user: publicUser(user), posts, projects });
+    const users = await usersService.searchUsers(req.query.q || "");
+    res.json({ ok: true, data: { users } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/:userId/public", async (req, res, next) => {
+  try {
+    const profile = await usersService.getPublicProfile(req.params.userId);
+    res.json({ ok: true, data: profile });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/me/settings", requireAuth, async (req, res, next) => {
+  try {
+    const payload = req.body || {};
+    const result = await query(
+      `UPDATE user_settings
+          SET language = COALESCE($2, language),
+              theme = COALESCE($3, theme),
+              reduced_motion = COALESCE($4, reduced_motion),
+              visual_quality = COALESCE($5, visual_quality),
+              audio_volume = COALESCE($6, audio_volume),
+              settings_json = settings_json || COALESCE($7::jsonb, '{}'::jsonb),
+              updated_at = now()
+        WHERE user_id = $1
+        RETURNING *`,
+      [
+        req.user.id,
+        payload.language ?? null,
+        payload.theme ?? null,
+        payload.reduced_motion ?? payload.reducedMotion ?? null,
+        payload.visual_quality ?? payload.visualQuality ?? null,
+        payload.audio_volume ?? payload.audioVolume ?? null,
+        JSON.stringify(payload.settings_json || payload.settingsJson || {})
+      ]
+    );
+    res.json({ ok: true, data: { settings: result.rows[0] } });
   } catch (error) {
     next(error);
   }

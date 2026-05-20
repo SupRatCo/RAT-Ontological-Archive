@@ -1,0 +1,19 @@
+.profile-banner {
+  min-height: 180px;
+  border-radius: var(--roa-radius);
+  background: linear-gradient(135deg, rgba(255, 216, 0, 0.35), rgba(6, 36, 58, 0.95));
+  border: 1px solid var(--roa-border);
+}
+
+.profile-header {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  margin-top: -34px;
+  padding: 0 18px;
+}
+
+.profile-header .roa-avatar {
+  width: 86px;
+  height: 86px;
+}

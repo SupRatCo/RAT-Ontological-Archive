@@ -1,0 +1,45 @@
+@media (max-width: 960px) {
+  :root {
+    --roa-sidebar-width: 96px;
+    --roa-topbar-height: 66px;
+  }
+
+  .roa-topbar {
+    grid-template-columns: 160px auto 1fr auto;
+    gap: 10px;
+  }
+
+  .roa-global-search {
+    display: none;
+  }
+
+  .roa-user-chip strong {
+    display: none;
+  }
+
+  .forum-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .roa-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .roa-sidebar {
+    display: none;
+  }
+
+  .roa-topbar {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  .roa-logo {
+    clip-path: none;
+  }
+}

@@ -1,0 +1,21 @@
+:root {
+  --roa-bg: #020b14;
+  --roa-panel: #041a2b;
+  --roa-panel-2: #06243a;
+  --roa-sidebar: #021625;
+  --roa-topbar: #ffd800;
+  --roa-accent: #ffd800;
+  --roa-accent-soft: rgba(255, 216, 0, 0.35);
+  --roa-text: #edf6ff;
+  --roa-muted: #9fb6cc;
+  --roa-border: #ffd800;
+  --roa-border-blue: #9cc7e8;
+  --roa-danger: #ff4f4f;
+  --roa-success: #4dff98;
+  --roa-radius: 14px;
+  --roa-radius-sm: 8px;
+  --roa-topbar-height: 74px;
+  --roa-sidebar-width: 150px;
+  --roa-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}

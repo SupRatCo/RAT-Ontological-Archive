@@ -1,0 +1,26 @@
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(460px, 100%);
+}
+
+.auth-card h1 {
+  margin: 0 0 8px;
+  color: var(--roa-accent);
+  text-transform: uppercase;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-switch {
+  margin-top: 14px;
+  color: var(--roa-muted);
+}

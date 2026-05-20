@@ -1,84 +1,64 @@
 const express = require("express");
-const path = require("path");
-const { run, all, get } = require("../database");
+const { query } = require("../db/pool");
 const { requireAuth } = require("../middleware/auth.middleware");
-const { requireProjectReader, requireProjectEditor } = require("../middleware/permissions.middleware");
-const { mediaUpload } = require("../middleware/upload.middleware");
-const storage = require("../storage");
+const { upload } = require("../middleware/upload.middleware");
+const { assertProjectEditor, canViewProject } = require("../services/permissions.service");
+const storageService = require("../services/storage.service");
+const { forbidden, notFound } = require("../utils/errors");
 
 const router = express.Router();
-const uid = (prefix) => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
-const now = () => new Date().toISOString();
 
-function out(row) {
-  const publicUrl = row.public_url || row.file_path;
-  return {
-    id: row.id,
-    projectId: row.project_id,
-    uploadedBy: row.uploaded_by,
-    filePath: publicUrl,
-    src: publicUrl,
-    data: publicUrl,
-    kind: row.type,
-    type: row.type,
-    mimeType: row.mime_type,
-    name: row.title,
-    title: row.title,
-    description: row.description,
-    metadata: JSON.parse(row.metadata_json || "{}"),
-    storageProvider: row.storage_provider || "local",
-    storageKey: row.storage_key || "",
-    publicUrl,
-    size: Number(row.size || 0),
-    uploadedAt: row.created_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  };
-}
-
-router.get("/project/:projectId", requireAuth, requireProjectReader("projectId"), async (req, res, next) => {
+router.get("/project/:projectId", requireAuth, async (req, res, next) => {
   try {
-    const rows = await all("SELECT * FROM media WHERE project_id = ? ORDER BY created_at DESC", [req.params.projectId]);
-    res.json({ media: rows.map(out) });
-  } catch (error) { next(error); }
+    if (!(await canViewProject(req.params.projectId, req.user.id))) throw forbidden("No tienes acceso a la galería.");
+    const result = await query(
+      `SELECT * FROM media WHERE project_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC`,
+      [req.params.projectId]
+    );
+    res.json({ ok: true, data: { media: result.rows } });
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post("/project/:projectId", requireAuth, requireProjectEditor("projectId"), mediaUpload.single("media"), async (req, res, next) => {
+router.post("/project/:projectId", requireAuth, upload.single("file"), async (req, res, next) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No se recibio ningun archivo multimedia." });
-    const isVideo = /^video\//.test(req.file.mimetype);
-    const folder = isVideo ? "videos" : "images";
-    const stored = await storage.uploadFile(req.file, folder);
-    let publicPath = stored.publicUrl;
-    if (stored.provider === "local") {
-      const oldPath = req.file.path;
-      const fileName = path.basename(oldPath);
-      publicPath = `/uploads/${folder}/${fileName}`;
-      if (!oldPath.includes(`${path.sep}${folder}${path.sep}`)) {
-      const fs = require("fs");
-      const target = path.join(__dirname, "..", "uploads", folder, fileName);
-      fs.renameSync(oldPath, target);
-      }
-    }
-    const id = uid(isVideo ? "video" : "image");
-    await run("INSERT INTO media (id, project_id, uploaded_by, file_path, type, mime_type, title, description, metadata_json, storage_provider, storage_key, public_url, size, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
-      id, req.params.projectId, req.user.id, publicPath, isVideo ? "video" : "image", req.file.mimetype, req.body.title || req.file.originalname, req.body.description || "", JSON.stringify({ size: req.file.size, relatedFiles: req.body.relatedFiles || "" }), stored.provider, stored.key || "", stored.publicUrl || publicPath, req.file.size || 0, now(), now()
-    ]);
-    res.json({ media: out(await get("SELECT * FROM media WHERE id = ?", [id])) });
-  } catch (error) { next(error); }
+    if (!(await assertProjectEditor(req.params.projectId, req.user.id))) throw forbidden("No puedes subir media a este proyecto.");
+    const uploaded = await storageService.uploadFile(req.file, { userId: req.user.id, prefix: `projects/${req.params.projectId}` });
+    const result = await query(
+      `INSERT INTO media (project_id, uploaded_by, storage_provider, storage_key, public_url, mime_type, media_type, size, title, description)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [
+        req.params.projectId,
+        req.user.id,
+        uploaded.storage_provider,
+        uploaded.storage_key,
+        uploaded.public_url,
+        uploaded.mime_type,
+        uploaded.media_type,
+        uploaded.size,
+        req.body.title || req.file.originalname,
+        req.body.description || ""
+      ]
+    );
+    res.status(201).json({ ok: true, data: { media: result.rows[0] } });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.delete("/:mediaId", requireAuth, async (req, res, next) => {
   try {
-    const media = await get("SELECT * FROM media WHERE id = ?", [req.params.mediaId]);
-    if (!media) return res.status(404).json({ error: "Media not found" });
-    req.params.projectId = media.project_id;
-    await requireProjectEditor("projectId")(req, res, async () => {
-      await storage.deleteFile(media).catch((error) => console.warn("Could not delete stored media", error));
-      await run("DELETE FROM media WHERE id = ?", [req.params.mediaId]);
-      res.json({ ok: true });
-    });
-  } catch (error) { next(error); }
+    const mediaResult = await query("SELECT * FROM media WHERE id = $1 AND deleted_at IS NULL", [req.params.mediaId]);
+    const media = mediaResult.rows[0];
+    if (!media) throw notFound("Media no encontrada.");
+    if (media.project_id && !(await assertProjectEditor(media.project_id, req.user.id))) throw forbidden("No puedes borrar este archivo.");
+    await query("UPDATE media SET deleted_at = now(), updated_at = now() WHERE id = $1", [media.id]);
+    res.json({ ok: true, data: { deleted: true } });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

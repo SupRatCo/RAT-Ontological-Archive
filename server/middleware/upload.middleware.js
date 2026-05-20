@@ -1,33 +1,34 @@
-const path = require("path");
-const fs = require("fs");
 const multer = require("multer");
-const { isExternalStorageConfigured } = require("../storage");
+const { badRequest } = require("../utils/errors");
 
-function storageFor(kind) {
-  const dir = path.join(__dirname, "..", "uploads", kind);
-  fs.mkdirSync(dir, { recursive: true });
-  return multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, dir),
-    filename: (_req, file, cb) => {
-      const safe = file.originalname.replace(/[^a-z0-9_.-]/gi, "-");
-      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}-${safe}`);
+const imageTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+const videoTypes = new Set(["video/mp4", "video/webm", "video/ogg"]);
+const allowedTypes = new Set([...imageTypes, ...videoTypes]);
+
+const maxUploadMb = Number(process.env.MAX_UPLOAD_MB || 50);
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: maxUploadMb * 1024 * 1024
+  },
+  fileFilter(_req, file, callback) {
+    if (!allowedTypes.has(file.mimetype)) {
+      return callback(badRequest("Tipo de archivo no permitido."));
     }
-  });
-}
-
-const mediaUpload = multer({
-  storage: isExternalStorageConfigured() ? multer.memoryStorage() : storageFor("images"),
-  limits: { fileSize: 30 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (/^image\/|^video\//.test(file.mimetype)) cb(null, true);
-    else cb(new Error("Unsupported media type"));
+    callback(null, true);
   }
 });
 
-const avatarUpload = multer({
-  storage: isExternalStorageConfigured() ? multer.memoryStorage() : storageFor("avatars"),
-  limits: { fileSize: 4 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => /^image\//.test(file.mimetype) ? cb(null, true) : cb(new Error("Unsupported avatar type"))
-});
+function mediaTypeFromMime(mimeType) {
+  if (imageTypes.has(mimeType)) return "image";
+  if (videoTypes.has(mimeType)) return "video";
+  return "file";
+}
 
-module.exports = { mediaUpload, avatarUpload };
+module.exports = {
+  upload,
+  mediaTypeFromMime,
+  allowedTypes,
+  maxUploadMb
+};

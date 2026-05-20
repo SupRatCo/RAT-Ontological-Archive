@@ -1,0 +1,16 @@
+.settings-layout {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.settings-nav {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.settings-section {
+  display: grid;
+  gap: 14px;
+}

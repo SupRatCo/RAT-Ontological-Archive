@@ -1,47 +1,71 @@
 const express = require("express");
-const { run, all, get } = require("../database");
+const { query } = require("../db/pool");
 const { requireAuth } = require("../middleware/auth.middleware");
-const { requireProjectReader, requireProjectEditor } = require("../middleware/permissions.middleware");
+const { assertProjectEditor, canViewProject } = require("../services/permissions.service");
+const { badRequest, forbidden } = require("../utils/errors");
 
 const router = express.Router();
-const uid = (prefix) => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
-const now = () => new Date().toISOString();
 
-router.get("/project/:projectId", requireAuth, requireProjectReader("projectId"), async (req, res, next) => {
-  try { res.json({ tags: await all("SELECT * FROM tags WHERE project_id = ? ORDER BY name", [req.params.projectId]) }); }
-  catch (error) { next(error); }
+router.get("/project/:projectId", requireAuth, async (req, res, next) => {
+  try {
+    if (!(await canViewProject(req.params.projectId, req.user.id))) throw forbidden("No tienes acceso a las etiquetas.");
+    const result = await query("SELECT * FROM tags WHERE project_id = $1 ORDER BY name ASC", [req.params.projectId]);
+    res.json({ ok: true, data: { tags: result.rows } });
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.post("/project/:projectId", requireAuth, requireProjectEditor("projectId"), async (req, res, next) => {
+router.post("/project/:projectId", requireAuth, async (req, res, next) => {
   try {
-    const id = uid("tag");
-    await run("INSERT INTO tags (id, project_id, name, color, description, category, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [id, req.params.projectId, req.body.name, req.body.color || "#ffd800", req.body.description || "", req.body.category || "Personalizada", now(), now()]);
-    res.json({ tag: await get("SELECT * FROM tags WHERE id = ?", [id]) });
-  } catch (error) { next(error); }
+    if (!(await assertProjectEditor(req.params.projectId, req.user.id))) throw forbidden("No puedes crear etiquetas.");
+    const name = String(req.body.name || "").trim();
+    if (!name) throw badRequest("El nombre de la etiqueta es obligatorio.");
+    const result = await query(
+      `INSERT INTO tags (project_id, name, color, description)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [req.params.projectId, name, req.body.color || "#ffd800", req.body.description || ""]
+    );
+    res.status(201).json({ ok: true, data: { tag: result.rows[0] } });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.patch("/:tagId", requireAuth, async (req, res, next) => {
   try {
-    const tag = await get("SELECT * FROM tags WHERE id = ?", [req.params.tagId]);
-    if (!tag) return res.status(404).json({ error: "Tag not found" });
-    req.params.projectId = tag.project_id;
-    await requireProjectEditor("projectId")(req, res, async () => {
-      await run("UPDATE tags SET name = COALESCE(?, name), color = COALESCE(?, color), description = COALESCE(?, description), category = COALESCE(?, category), updated_at = ? WHERE id = ?", [req.body.name ?? null, req.body.color ?? null, req.body.description ?? null, req.body.category ?? null, now(), req.params.tagId]);
-      res.json({ tag: await get("SELECT * FROM tags WHERE id = ?", [req.params.tagId]) });
-    });
-  } catch (error) { next(error); }
+    const current = await query("SELECT * FROM tags WHERE id = $1", [req.params.tagId]);
+    const tag = current.rows[0];
+    if (!tag) throw badRequest("Etiqueta no encontrada.");
+    if (!(await assertProjectEditor(tag.project_id, req.user.id))) throw forbidden("No puedes editar etiquetas.");
+    const result = await query(
+      `UPDATE tags
+          SET name = COALESCE($2, name),
+              color = COALESCE($3, color),
+              description = COALESCE($4, description),
+              updated_at = now()
+        WHERE id = $1
+        RETURNING *`,
+      [req.params.tagId, req.body.name ?? null, req.body.color ?? null, req.body.description ?? null]
+    );
+    res.json({ ok: true, data: { tag: result.rows[0] } });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.delete("/:tagId", requireAuth, async (req, res, next) => {
   try {
-    const tag = await get("SELECT * FROM tags WHERE id = ?", [req.params.tagId]);
-    if (!tag) return res.status(404).json({ error: "Tag not found" });
-    req.params.projectId = tag.project_id;
-    await requireProjectEditor("projectId")(req, res, async () => {
-      await run("DELETE FROM tags WHERE id = ?", [req.params.tagId]);
-      res.json({ ok: true });
-    });
-  } catch (error) { next(error); }
+    const current = await query("SELECT * FROM tags WHERE id = $1", [req.params.tagId]);
+    const tag = current.rows[0];
+    if (!tag) throw badRequest("Etiqueta no encontrada.");
+    if (!(await assertProjectEditor(tag.project_id, req.user.id))) throw forbidden("No puedes borrar etiquetas.");
+    await query("DELETE FROM tags WHERE id = $1", [req.params.tagId]);
+    res.json({ ok: true, data: { deleted: true } });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;
