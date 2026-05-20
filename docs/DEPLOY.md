@@ -44,6 +44,30 @@ GITHUB_PAGES=true
 
 The Vite config sets the base path to `/RAT-Ontological-Archive/` when `GITHUB_PAGES=true`.
 
+This repository includes `.github/workflows/static.yml`, which builds `client/` and uploads only `client/dist`. It no longer uploads the repository root, so the legacy root `index.html` is not the Pages artifact when the workflow runs.
+
+Recommended GitHub variable:
+
+```txt
+VITE_API_URL=https://rat-ontological-api.onrender.com
+```
+
+If that variable is not set, the workflow falls back to `https://rat-ontological-api.onrender.com`.
+
+## Legacy Root Frontend
+
+The old static frontend still exists at repository root:
+
+```txt
+index.html
+css/
+js/
+assets/
+img/
+```
+
+Recommendation: keep it temporarily until the Vite frontend is confirmed online, then move those files to `legacy/static-app/` or remove them in a dedicated cleanup commit. Do not let GitHub Pages deploy the root app anymore.
+
 ## Production Warning
 
 Render local disk is not used for permanent media in this rebuild. Files must live in Supabase Storage or another external storage provider.
