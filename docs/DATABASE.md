@@ -1,47 +1,37 @@
 # Database
 
-RAT Ontological Archive uses PostgreSQL.
+RAT Ontological Archive now uses Cloud Firestore.
 
-## Schema
+## Main Collections
 
-Run:
+- `users/{uid}`
+- `usernames/{usernameLower}`
+- `userSettings/{uid}`
+- `projects/{projectId}`
+- `projects/{projectId}/members/{uid}`
+- `projects/{projectId}/documents/{documentId}`
+- `projects/{projectId}/dataFiles/{dataFileId}`
+- `projects/{projectId}/dataFiles/{dataFileId}/sections/{sectionId}`
+- `projects/{projectId}/dataFiles/{dataFileId}/sections/{sectionId}/fields/{fieldId}`
+- `projects/{projectId}/media/{mediaId}`
+- `projects/{projectId}/tags/{tagId}`
+- `forumPosts/{postId}`
+- `forumPosts/{postId}/comments/{commentId}`
+- `forumPosts/{postId}/likes/{uid}`
+- `forumPosts/{postId}/savedBy/{uid}`
+- `notifications/{uid}/items/{notificationId}`
+- `friendships/{friendshipId}`
+- `projectInvites/{inviteId}`
 
-```bash
-cd server
-npm run migrate
-```
+## Media
 
-Schema file:
+Firestore stores metadata only. Files live in Cloudinary.
 
-```txt
-server/db/schema.sql
-```
+## Rules And Indexes
 
-## Core Tables
+Use:
 
-- `users`: login identity.
-- `user_profiles`: public and editable profile data.
-- `user_settings`: language, theme, visual quality, preferences.
-- `projects`: narrative universes.
-- `project_members`: owner/editor/viewer access.
-- `project_invites`: collaborator invitations.
-- `friendships`: social graph foundation.
-- `documents`: WYSIWYG document content.
-- `data_files`: flexible structured lore files.
-- `data_file_sections`: custom data file sections.
-- `data_file_fields`: custom fields per section.
-- `tags`, `file_tags`: project tagging.
-- `media`, `media_tags`: Supabase Storage metadata.
-- `forum_posts`, `forum_comments`, `forum_likes`, `saved_posts`: community forum.
-- `notifications`: user notifications.
+- `firestore.rules`
+- `firestore.indexes.json`
 
-## Important Constraints
-
-- `forum_likes` has `UNIQUE(post_id, user_id)` to prevent duplicate likes.
-- `project_members` has `UNIQUE(project_id, user_id)`.
-- Project roles are constrained to `owner`, `editor`, `viewer`.
-- Visibility values are constrained for projects, documents, data files, and posts.
-
-## Indexes
-
-Indexes are included for projects, project members, documents, data files, media, forum posts, comments, likes, and notifications.
+The old PostgreSQL schema is preserved only in `legacy/server-express-postgres/`.

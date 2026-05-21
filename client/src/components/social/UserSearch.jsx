@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { usersApi } from "../../api/users.api";
+import { searchUsers } from "../../services/userService";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 
@@ -8,7 +8,7 @@ export default function UserSearch() {
   const [users, setUsers] = useState([]);
 
   async function search() {
-    const data = await usersApi.search(q);
+    const data = await searchUsers(q);
     setUsers(data.users || []);
   }
 

@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { dataFilesApi } from "../api/dataFiles.api";
+import {
+  createDataFile as createDataFileRecord,
+  createField as createFieldRecord,
+  createSection as createSectionRecord,
+  deleteSection as deleteSectionRecord,
+  getDataFile,
+  getDataFiles,
+  updateField as updateFieldRecord
+} from "../services/dataFileService";
 import DataFileList from "../components/dataFiles/DataFileList";
 import DataFileEditor from "../components/dataFiles/DataFileEditor";
 import EmptyState from "../components/ui/EmptyState";
@@ -10,7 +18,7 @@ export default function DataFilePage({ project, toast }) {
 
   async function load() {
     if (!project?.id) return;
-    const data = await dataFilesApi.list(project.id);
+    const data = await getDataFiles(project.id);
     setDataFiles(data.dataFiles || []);
   }
 
@@ -21,38 +29,38 @@ export default function DataFilePage({ project, toast }) {
   async function createDataFile() {
     const title = prompt("Nombre del Archivo de Datos");
     if (!title) return;
-    const data = await dataFilesApi.create(project.id, { title });
+    const data = await createDataFileRecord(project.id, { title });
     setDataFiles((current) => [data.dataFile, ...current]);
-    const full = await dataFilesApi.get(data.dataFile.id);
+    const full = await getDataFile(project.id, data.dataFile.id);
     setActive(full.dataFile);
   }
 
   async function openDataFile(file) {
-    const data = await dataFilesApi.get(file.id);
+    const data = await getDataFile(project.id, file.id);
     setActive(data.dataFile);
   }
 
   async function addSection() {
     const title = prompt("Nombre de la sección");
     if (!title) return;
-    const data = await dataFilesApi.createSection(active.id, { title });
+    const data = await createSectionRecord(project.id, active.id, { title });
     setActive((current) => ({ ...current, sections: [...(current.sections || []), data.section] }));
   }
 
   async function addField(section) {
     const label = prompt("Nombre del campo");
     if (!label) return;
-    const data = await dataFilesApi.createField(section.id, { label, field_type: "short_text" });
+    const data = await createFieldRecord(project.id, active.id, section.id, { label, field_type: "short_text" });
     setActive((current) => ({ ...current, fields: [...(current.fields || []), data.field] }));
   }
 
   async function updateField(field, value) {
-    const data = await dataFilesApi.updateField(field.id, { value_json: value });
+    const data = await updateFieldRecord(project.id, active.id, field.section_id, field.id, { value_json: value });
     setActive((current) => ({ ...current, fields: current.fields.map((item) => item.id === field.id ? data.field : item) }));
   }
 
   async function deleteSection(section) {
-    await dataFilesApi.deleteSection(section.id);
+    await deleteSectionRecord(project.id, active.id, section.id);
     setActive((current) => ({
       ...current,
       sections: current.sections.filter((item) => item.id !== section.id),

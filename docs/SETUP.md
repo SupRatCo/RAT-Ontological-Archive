@@ -1,40 +1,31 @@
 # Local Setup
 
-## Backend
+The active app is `client/`.
 
-```bash
-cd server
-npm install
-cp .env.example .env
-npm run migrate
-npm start
-```
-
-The backend runs on `http://localhost:3000`.
-
-`DATABASE_URL` is required for real persistence. Without it the API starts, but database-backed routes return clear errors.
-
-## Frontend
+## Install
 
 ```bash
 cd client
 npm install
-cp .env.example .env
 npm run dev
 ```
 
-The frontend runs on `http://localhost:5173`.
+## Environment
 
-Set:
+Copy:
 
-```txt
-VITE_API_URL=http://localhost:3000
+```bash
+cp client/.env.example client/.env
 ```
 
-## Health Check
+Fill Firebase and Cloudinary values. The app no longer needs a local Express API, database URL, or server health endpoint.
 
-Open:
+## Required Services
 
-```txt
-http://localhost:3000/api/health
-```
+- Firebase Authentication: enable Email/Password.
+- Cloud Firestore: create database and apply `firestore.rules`.
+- Cloudinary: create unsigned upload preset, recommended `roa_unsigned`.
+
+## Legacy
+
+The previous static frontend and Express/PostgreSQL backend live under `legacy/`. They are kept for reference only and are not required for the Firebase app.

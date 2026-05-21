@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { mediaApi } from "../api/media.api";
+import { getProjectMedia, uploadProjectMedia } from "../services/mediaService";
 import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
 import MediaGrid from "../components/gallery/MediaGrid";
@@ -13,7 +13,7 @@ export default function GalleryPage({ project, toast }) {
 
   async function load() {
     if (!project?.id) return;
-    const data = await mediaApi.list(project.id);
+    const data = await getProjectMedia(project.id);
     setMedia(data.media || []);
   }
 
@@ -22,21 +22,25 @@ export default function GalleryPage({ project, toast }) {
   }, [project?.id]);
 
   async function upload(file, metadata) {
-    const data = await mediaApi.upload(project.id, file, metadata);
+    const data = await uploadProjectMedia(project.id, file, metadata);
     setMedia((current) => [data.media, ...current]);
     setUploadOpen(false);
     toast("Media subida.");
   }
 
-  if (!project) return <EmptyState title="NO PROJECT" message="Selecciona un proyecto para abrir Galería." />;
+  if (!project) return <EmptyState title="NO PROJECT" message="Selecciona un proyecto para abrir Galeria." />;
 
   return (
     <section className="roa-panel">
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <h2 className="roa-panel-title">Galería</h2>
+        <h2 className="roa-panel-title">Galeria</h2>
         <Button variant="primary" onClick={() => setUploadOpen(true)}>+ Subir</Button>
       </div>
-      {media.length ? <MediaGrid media={media} onOpen={setViewer} /> : <EmptyState title="NO MEDIA" kicker="/YET/" message="Sube imágenes o videos a Supabase Storage." actionLabel="Subir media" onAction={() => setUploadOpen(true)} />}
+      {media.length ? (
+        <MediaGrid media={media} onOpen={setViewer} />
+      ) : (
+        <EmptyState title="NO MEDIA" kicker="/YET/" message="Sube imagenes o videos a Cloudinary." actionLabel="Subir media" onAction={() => setUploadOpen(true)} />
+      )}
       {uploadOpen && <MediaUploadModal onClose={() => setUploadOpen(false)} onUpload={upload} />}
       <MediaViewer item={viewer} onClose={() => setViewer(null)} />
     </section>

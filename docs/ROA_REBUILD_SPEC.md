@@ -1,135 +1,51 @@
 # RAT Ontological Archive Rebuild Spec
 
-RAT Ontological Archive is a production-first web platform for writers, worldbuilders, narrative designers, artists, and creative communities. This rebuild replaces the accumulated local-first legacy stack with a clear client/server architecture.
-
-## Stack
-
-- Frontend: React + Vite.
-- Backend: Node.js + Express.
-- Database: PostgreSQL, intended for Supabase PostgreSQL.
-- Storage: Supabase Storage.
-- Auth: JWT + bcryptjs.
-- Deploy: static frontend on GitHub Pages, Vercel, or Netlify; API on Render.
+RAT Ontological Archive is an online-first creative archive and community for writers, worldbuilders, artists, and narrative designers.
 
 ## Architecture
 
 ```txt
-Client React/Vite -> Express API -> PostgreSQL + Supabase Storage
+React/Vite -> Firebase Auth -> Cloud Firestore -> Cloudinary
 ```
 
-The browser stores only small session/UI values: JWT token, UI preferences, language, and last active project id. Projects, documents, data files, media, forum posts, comments, likes, profiles, and permissions live in PostgreSQL or Supabase Storage.
+The app lives in `client/`. Legacy code lives in `legacy/`.
 
-## Folder Structure
+## Visual Direction
 
-- `client/`: React/Vite app.
-- `client/src/api/`: only allowed frontend API layer.
-- `client/src/components/`: UI, layout, auth, projects, documents, data files, gallery, forum, profile, settings, social.
-- `client/src/pages/`: route-like page components.
-- `client/src/styles/`: visual system based on the RAT mockups.
-- `server/`: Express API.
-- `server/db/`: PostgreSQL pool, schema, migration script.
-- `server/routes/`: versioned API routes under `/api`.
-- `server/services/`: business logic.
-- `server/middleware/`: auth, permissions, uploads, validation, rate limits, errors.
-- `docs/`: setup, deploy, database, API, and security notes.
-
-## Visual Design
-
-The base interface follows the provided mockups:
+The rebuild keeps the RAT mockup direction:
 
 - static space background;
 - yellow topbar;
 - dark blue sidebar;
-- large FORUM button;
-- project rail;
-- dark panels with yellow borders;
-- compact controls;
-- reduced animations by default.
+- project tiles;
+- ROA Community forum panels;
+- compact buttons;
+- reduced animation.
 
-## Data Model
+## Data Ownership
 
-The schema includes:
+Firestore is the source of truth for users, projects, documents, data files, forum content, and media metadata.
 
-- `users`, `user_profiles`, `user_settings`;
-- `projects`, `project_members`, `project_invites`, `friendships`;
-- `documents`;
-- `data_files`, `data_file_sections`, `data_file_fields`;
-- `tags`, `file_tags`;
-- `media`, `media_tags`;
-- `forum_posts`, `forum_comments`, `forum_likes`, `saved_posts`;
-- `notifications`.
+Cloudinary stores binary media. localStorage is limited to small UI preferences and last project id.
 
-## API Groups
+## Main Features
 
-- `/api/health`
-- `/api/auth`
-- `/api/users`
-- `/api/projects`
-- `/api/collaborators`
-- `/api/documents`
-- `/api/data-files`
-- `/api/tags`
-- `/api/media`
-- `/api/forum`
-- `/api/notifications`
-- `/api/settings`
+- Firebase Auth registration/login/logout.
+- Profiles in Firestore.
+- Projects with members.
+- Documents.
+- Flexible Data Files with sections and fields.
+- Gallery uploads through Cloudinary.
+- Forum posts, comments, likes, and saves.
+- Settings diagnostics for Firebase/Firestore/Cloudinary.
 
-All responses use:
+## Deployment
 
-```json
-{ "ok": true, "data": {} }
-```
+GitHub Pages is the primary deployment target. Firebase Hosting is configured as optional.
 
-Errors use:
+## Pending Hardening
 
-```json
-{ "ok": false, "error": "Clear message" }
-```
-
-## Roles and Permissions
-
-Project roles:
-
-- `owner`: full control.
-- `editor`: create and edit content.
-- `viewer`: read allowed content.
-
-The backend validates project permissions. UI visibility is not considered security.
-
-## Environment
-
-Backend needs:
-
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `CORS_ORIGINS`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_STORAGE_BUCKET`
-
-Frontend needs:
-
-- `VITE_API_URL`
-
-## Completed Foundation
-
-- Clean Express/PostgreSQL API scaffold.
-- PostgreSQL schema and migration.
-- JWT auth registration/login/session.
-- Project CRUD foundation.
-- Documents CRUD foundation with HTML sanitization.
-- Flexible Data File foundation.
-- Supabase Storage service.
-- Forum posts, comments, likes, saved posts foundation.
-- React/Vite frontend foundation.
-- Mockup-based visual layout.
-
-## Pending
-
-- Full route-level UI navigation beyond the single-page internal state.
-- Complete rich text editor commands beyond browser `execCommand`.
-- Full collaborator management UI.
-- Full notification creation for every event.
-- Complete i18n dictionaries.
-- Automated test suite.
-- Production deployment verification with real Supabase credentials.
+- More complete collaborator permission UI.
+- Admin Cloudinary cleanup path for physical deletion.
+- Stronger moderation tools.
+- More granular Firestore rules after real multiuser testing.

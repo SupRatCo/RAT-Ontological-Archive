@@ -2,42 +2,44 @@
 
 ## Authentication
 
-- Passwords are hashed with `bcryptjs`.
-- JWT tokens are signed with `JWT_SECRET`.
-- Production must set a stable strong `JWT_SECRET`.
-- The frontend stores only the JWT token and small preferences.
+Firebase Authentication handles email/password accounts and session persistence.
 
-## Authorization
+## Firestore
 
-Project access is checked in the backend:
+Rules are defined in `firestore.rules`.
 
-- `owner`: all project actions.
-- `editor`: create and edit project content.
-- `viewer`: read allowed content.
+Current rules enforce:
 
-The UI may hide buttons, but that is not a security boundary.
+- users can edit only their own profile/settings;
+- usernames are readable and reserved once;
+- private projects require membership;
+- project writing requires owner/editor membership;
+- forum posts are readable by authenticated users when public;
+- users can edit/delete only their own posts/comments;
+- likes and saved posts are scoped to each user's UID;
+- notifications are readable by the recipient.
 
-## Uploads
+Review and deploy rules before production use.
 
-- Uploads use memory storage in Express and are pushed to Supabase Storage.
-- Allowed MIME types: PNG, JPG, WEBP, GIF, MP4, WEBM, OGG.
-- `MAX_UPLOAD_MB` limits file size.
-- The Supabase service role key must never be sent to the frontend.
+## Cloudinary
 
-## HTML Content
+Cloudinary uses unsigned uploads from the browser. Only `cloud_name` and unsigned preset are exposed. Never expose API secret in Vite or GitHub Pages.
 
-Documents and forum posts store sanitized HTML. The sanitizer removes scripts, inline event handlers, and `javascript:` URLs. For production hardening, consider replacing this lightweight sanitizer with a battle-tested server-side HTML sanitizer.
+Physical deletion from Cloudinary is intentionally not implemented in the browser. The app deletes Firestore metadata only.
 
-## CORS
+## Local Storage
 
-Set `CORS_ORIGINS` to the exact frontend origins, for example:
+Allowed:
 
-```txt
-https://supratco.github.io,http://localhost:5173
-```
+- UI preferences;
+- language/theme;
+- last active project id.
 
-CORS origins do not include URL paths.
+Not allowed:
 
-## Rate Limits
-
-Auth and write-heavy endpoints use basic rate limiting. Add stricter production limits if the app becomes public.
+- projects;
+- documents;
+- media;
+- base64;
+- forum data;
+- Firebase service credentials.

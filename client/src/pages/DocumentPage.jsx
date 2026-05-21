@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { documentsApi } from "../api/documents.api";
-import { forumApi } from "../api/forum.api";
+import { createDocument as createDocumentRecord, getDocuments, updateDocument } from "../services/documentService";
+import { createPost } from "../services/forumService";
 import DocumentList from "../components/documents/DocumentList";
 import DocumentEditor from "../components/documents/DocumentEditor";
 import PublishDocumentModal from "../components/documents/PublishDocumentModal";
@@ -13,7 +13,7 @@ export default function DocumentPage({ project, toast }) {
 
   async function load() {
     if (!project?.id) return;
-    const data = await documentsApi.list(project.id);
+    const data = await getDocuments(project.id);
     setDocuments(data.documents || []);
   }
 
@@ -24,20 +24,20 @@ export default function DocumentPage({ project, toast }) {
   async function createDocument() {
     const title = prompt("Título del documento");
     if (!title) return;
-    const data = await documentsApi.create(project.id, { title });
+    const data = await createDocumentRecord(project.id, { title });
     setDocuments((current) => [data.document, ...current]);
     setActive(data.document);
   }
 
   async function saveDocument(payload) {
-    const data = await documentsApi.update(active.id, payload);
+    const data = await updateDocument(project.id, active.id, payload);
     setActive(data.document);
     setDocuments((current) => current.map((doc) => doc.id === data.document.id ? data.document : doc));
     toast("Documento guardado.");
   }
 
   async function publish(payload) {
-    const data = await forumApi.createPost(payload);
+    const data = await createPost({ ...payload, sourceProjectId: project.id });
     setPublishContent(null);
     toast(`Publicado: ${data.post.title}`);
   }

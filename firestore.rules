@@ -1,0 +1,139 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function member(projectId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/projects/$(projectId)/members/$(request.auth.uid));
+    }
+
+    function role(projectId) {
+      return get(/databases/$(database)/documents/projects/$(projectId)/members/$(request.auth.uid)).data.role;
+    }
+
+    function editor(projectId) {
+      return member(projectId) && role(projectId) in ["owner", "editor"];
+    }
+
+    function owner(projectId) {
+      return member(projectId) && role(projectId) == "owner";
+    }
+
+    function forumCounterUpdate() {
+      return signedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["likesCount", "savesCount", "commentsCount"]);
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if isSelf(uid);
+      allow update: if isSelf(uid);
+      allow delete: if false;
+    }
+
+    match /usernames/{usernameLower} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /userSettings/{uid} {
+      allow read, write: if isSelf(uid);
+    }
+
+    match /projects/{projectId} {
+      allow read: if resource.data.visibility == "public" || member(projectId);
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if editor(projectId);
+      allow delete: if owner(projectId);
+
+      match /members/{uid} {
+        allow read: if isSelf(uid) || member(projectId);
+        allow create: if isSelf(uid) || owner(projectId);
+        allow update, delete: if owner(projectId);
+      }
+
+      match /documents/{documentId} {
+        allow read: if member(projectId);
+        allow create, update, delete: if editor(projectId);
+      }
+
+      match /dataFiles/{dataFileId} {
+        allow read: if member(projectId);
+        allow create, update, delete: if editor(projectId);
+
+        match /sections/{sectionId} {
+          allow read: if member(projectId);
+          allow create, update, delete: if editor(projectId);
+
+          match /fields/{fieldId} {
+            allow read: if member(projectId);
+            allow create, update, delete: if editor(projectId);
+          }
+        }
+      }
+
+      match /media/{mediaId} {
+        allow read: if member(projectId);
+        allow create, update, delete: if editor(projectId);
+      }
+
+      match /tags/{tagId} {
+        allow read: if member(projectId);
+        allow create, update, delete: if editor(projectId);
+      }
+    }
+
+    match /forumPosts/{postId} {
+      allow read: if signedIn() && (resource.data.visibility == "public" || resource.data.authorId == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update: if (signedIn() && resource.data.authorId == request.auth.uid) || forumCounterUpdate();
+      allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
+
+      match /likes/{uid} {
+        allow read: if signedIn();
+        allow create, delete: if isSelf(uid);
+      }
+
+      match /savedBy/{uid} {
+        allow read, create, delete: if isSelf(uid);
+      }
+
+      match /comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.authorId == request.auth.uid;
+        allow update, delete: if signedIn() && resource.data.authorId == request.auth.uid;
+      }
+    }
+
+    match /notifications/{uid}/items/{notificationId} {
+      allow read, update, delete: if isSelf(uid);
+      allow create: if signedIn();
+    }
+
+    match /friendships/{friendshipId} {
+      allow read: if signedIn() &&
+        (resource.data.requesterId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.requesterId == request.auth.uid;
+      allow update, delete: if signedIn() &&
+        (resource.data.requesterId == request.auth.uid || resource.data.receiverId == request.auth.uid);
+    }
+
+    match /projectInvites/{inviteId} {
+      allow read: if signedIn() &&
+        (resource.data.inviterId == request.auth.uid || resource.data.invitedUserId == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.inviterId == request.auth.uid;
+      allow update: if signedIn() &&
+        (resource.data.inviterId == request.auth.uid || resource.data.invitedUserId == request.auth.uid);
+      allow delete: if false;
+    }
+  }
+}

@@ -1,5 +1,4 @@
 export const APP_NAME = import.meta.env.VITE_APP_NAME || "RAT Ontological Archive";
-export const TOKEN_KEY = "roa_token";
 export const LAST_PROJECT_KEY = "roa_last_project_id";
 export const UI_PREFS_KEY = "roa_ui_preferences";
 

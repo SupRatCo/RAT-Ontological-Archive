@@ -1,73 +1,46 @@
 # Deploy
 
-## Render Backend
+## Primary Hosting: GitHub Pages
 
-Render settings:
+The workflow `.github/workflows/static.yml` builds `client/` and publishes `client/dist`.
 
-```txt
-Root Directory: server
-Build Command: npm install
-Start Command: npm start
-```
-
-Required environment variables:
+Configure GitHub repository variables:
 
 ```txt
-NODE_ENV=production
-PORT=3000
-DATABASE_URL=...
-JWT_SECRET=...
-CORS_ORIGINS=https://supratco.github.io,http://localhost:5173
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-SUPABASE_STORAGE_BUCKET=roa-media
-STORAGE_PROVIDER=supabase
-MAX_UPLOAD_MB=50
+VITE_FIREBASE_API_KEY
+VITE_FIREBASE_AUTH_DOMAIN
+VITE_FIREBASE_PROJECT_ID
+VITE_FIREBASE_STORAGE_BUCKET
+VITE_FIREBASE_MESSAGING_SENDER_ID
+VITE_FIREBASE_APP_ID
+VITE_FIREBASE_MEASUREMENT_ID
+VITE_CLOUDINARY_CLOUD_NAME
+VITE_CLOUDINARY_UPLOAD_PRESET
 ```
 
-Do not expose `SUPABASE_SERVICE_ROLE_KEY` to the frontend.
-
-## Supabase
-
-Use Supabase PostgreSQL for `DATABASE_URL`.
-
-Create a public or policy-controlled storage bucket named by `SUPABASE_STORAGE_BUCKET`. The current API uses public URLs for uploaded media metadata.
-
-## Frontend
-
-For GitHub Pages, build the Vite client with:
+Recommended Cloudinary values:
 
 ```txt
-VITE_API_URL=https://your-render-api.onrender.com
-GITHUB_PAGES=true
+VITE_CLOUDINARY_CLOUD_NAME=daxbclh7a
+VITE_CLOUDINARY_UPLOAD_PRESET=roa_unsigned
 ```
 
-The Vite config sets the base path to `/RAT-Ontological-Archive/` when `GITHUB_PAGES=true`.
+## Firebase
 
-This repository includes `.github/workflows/static.yml`, which builds `client/` and uploads only `client/dist`. It no longer uploads the repository root, so the legacy root `index.html` is not the Pages artifact when the workflow runs.
+Enable Email/Password Auth and Cloud Firestore.
 
-Recommended GitHub variable:
+Deploy rules and indexes with Firebase CLI if available:
 
-```txt
-VITE_API_URL=https://rat-ontological-api.onrender.com
+```bash
+firebase deploy --only firestore
 ```
 
-If that variable is not set, the workflow falls back to `https://rat-ontological-api.onrender.com`.
+Firebase Hosting is optional. `firebase.json` points to `client/dist`.
 
-## Legacy Root Frontend
+## Cloudinary
 
-The old static frontend still exists at repository root:
+Create an unsigned upload preset. Do not expose Cloudinary API secret in the frontend.
 
-```txt
-index.html
-css/
-js/
-assets/
-img/
-```
+## Legacy Backend
 
-Recommendation: keep it temporarily until the Vite frontend is confirmed online, then move those files to `legacy/static-app/` or remove them in a dedicated cleanup commit. Do not let GitHub Pages deploy the root app anymore.
-
-## Production Warning
-
-Render local disk is not used for permanent media in this rebuild. Files must live in Supabase Storage or another external storage provider.
+The Express/PostgreSQL backend is now in `legacy/server-express-postgres/`. It is not required for the main Firebase app.

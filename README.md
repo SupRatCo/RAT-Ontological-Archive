@@ -1,99 +1,99 @@
 # RAT Ontological Archive
 
-RAT Ontological Archive is a production-first creative archive for writers, worldbuilders, narrative designers, artists, and communities.
+RAT Ontological Archive is a web platform for writers, worldbuilders, narrative designers, and creative communities.
 
-This rebuild is a clean architecture reset:
+The current app is the React/Vite rebuild in `client/`.
 
 ```txt
-React/Vite frontend -> Express API -> PostgreSQL + Supabase Storage
+React/Vite frontend -> Firebase Auth -> Cloud Firestore -> Cloudinary
 ```
 
-No important app data is stored in `localStorage`. The browser keeps only the JWT token and small UI preferences.
+The old static app and Express/PostgreSQL backend were moved to `legacy/` and are not required for the main app.
 
 ## Stack
 
 - Frontend: React + Vite.
-- Backend: Node.js + Express.
-- Database: PostgreSQL, recommended through Supabase.
-- Storage: Supabase Storage.
-- Auth: JWT + bcryptjs.
-- Deploy: GitHub Pages/Vercel/Netlify for frontend, Render for backend.
+- Auth: Firebase Authentication.
+- Database: Cloud Firestore.
+- Media: Cloudinary unsigned uploads.
+- Hosting: GitHub Pages first, Firebase Hosting optional.
+- Legacy: `legacy/server-express-postgres/` and `legacy/static-app/`.
 
-## Run Backend
-
-```bash
-cd server
-npm install
-cp .env.example .env
-npm run migrate
-npm start
-```
-
-Health endpoint:
-
-```txt
-http://localhost:3000/api/health
-```
-
-## Run Frontend
+## Local Setup
 
 ```bash
 cd client
 npm install
-cp .env.example .env
 npm run dev
 ```
 
-Open:
+Create `client/.env` from `client/.env.example`.
 
-```txt
-http://localhost:5173
+Required frontend variables:
+
+```env
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=rat-ontological-archive.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=rat-ontological-archive
+VITE_FIREBASE_STORAGE_BUCKET=rat-ontological-archive.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+VITE_FIREBASE_MEASUREMENT_ID=
+
+VITE_CLOUDINARY_CLOUD_NAME=daxbclh7a
+VITE_CLOUDINARY_UPLOAD_PRESET=roa_unsigned
 ```
 
-## Required Backend Env Vars
+Firebase web config values are safe to expose in Vite. Do not put Firebase service account keys or Cloudinary API secrets in the frontend.
+
+## Firebase
+
+Enable:
+
+- Firebase Authentication with Email/Password.
+- Cloud Firestore.
+
+Deploy or paste the rules from `firestore.rules` and indexes from `firestore.indexes.json`.
+
+## Cloudinary
+
+Create an unsigned upload preset, recommended name:
 
 ```txt
-NODE_ENV=production
-DATABASE_URL=...
-JWT_SECRET=...
-CORS_ORIGINS=https://supratco.github.io,http://localhost:5173
-SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-SUPABASE_STORAGE_BUCKET=roa-media
-STORAGE_PROVIDER=supabase
-MAX_UPLOAD_MB=50
+roa_unsigned
 ```
 
-## Required Frontend Env Vars
+Firebase Storage is not used in this version. Images, videos, avatars, banners, covers, and gallery media upload to Cloudinary; Firestore stores only metadata.
 
-```txt
-VITE_API_URL=https://your-render-api.onrender.com
-VITE_APP_NAME=RAT Ontological Archive
-```
+Unsigned uploads cannot securely delete physical Cloudinary assets from the browser. The app deletes Firestore metadata; physical cleanup should be handled later by an admin workflow or backend function.
 
-## Main Features in This Rebuild Foundation
+## Deploy
 
-- JWT auth with register/login/session restore.
-- User profiles.
-- Project CRUD with owner/editor/viewer roles.
-- Documents with WYSIWYG foundation and autosave-ready editor.
-- Flexible Data Files with custom sections and fields.
-- Supabase Storage upload service.
-- Gallery metadata in PostgreSQL.
-- Forum posts, likes, saved posts, comments.
-- Settings modal with General, Cuenta, Video, Audio, Datos, Proyectos, Seguridad.
-- Mockup-based visual shell: yellow topbar, dark sidebar, space background, dark panels, yellow borders.
+GitHub Pages builds `client/` through `.github/workflows/static.yml`.
 
-## Documentation
+Configure repository variables:
 
-- [Rebuild Spec](docs/ROA_REBUILD_SPEC.md)
-- [Setup](docs/SETUP.md)
-- [Deploy](docs/DEPLOY.md)
-- [Database](docs/DATABASE.md)
-- [API](docs/API.md)
-- [Security](docs/SECURITY.md)
-- [Build Report](BUILD_REPORT.md)
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_MEASUREMENT_ID`
+- `VITE_CLOUDINARY_CLOUD_NAME`
+- `VITE_CLOUDINARY_UPLOAD_PRESET`
 
-## Production Notes
+Firebase Hosting is prepared with `firebase.json`, but GitHub Pages remains the primary hosting target.
 
-SQLite and Render local uploads are not production storage. Use PostgreSQL and Supabase Storage. Do not put Supabase service keys in the frontend.
+## Current Functional Surface
+
+- Register/login/logout through Firebase Auth.
+- User profiles in Firestore.
+- Projects and project members in Firestore.
+- Documents in Firestore.
+- Flexible Data Files with sections and fields in Firestore.
+- Forum posts, likes, saves, and comments in Firestore.
+- Gallery media uploads to Cloudinary with metadata in Firestore.
+- Settings diagnostics show Firebase/Firestore/Cloudinary instead of server health.
+
+See `BUILD_REPORT.md` for verified status and known limitations.

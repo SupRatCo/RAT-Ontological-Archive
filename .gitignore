@@ -8,3 +8,5 @@ server/data/fallback-db.json
 server/uploads/
 .env
 server/.env
+.env
+client/.env

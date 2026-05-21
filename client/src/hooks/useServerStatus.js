@@ -1,18 +1,32 @@
 import { useCallback, useEffect, useState } from "react";
-import { settingsApi } from "../api/settings.api";
-import { apiPath } from "../api/apiClient";
+import { testFirebaseConfiguration } from "../services/settingsService";
+import { isCloudinaryConfigured } from "../services/cloudinaryService";
 
 export default function useServerStatus() {
-  const [status, setStatus] = useState({ state: "checking", healthUrl: apiPath("/health") });
+  const [status, setStatus] = useState({
+    state: "checking",
+    auth: "Firebase Authentication",
+    database: "Cloud Firestore",
+    media: "Cloudinary"
+  });
 
   const test = useCallback(async () => {
     const started = performance.now();
     try {
-      const health = await settingsApi.health();
-      setStatus({ state: "connected", latency: Math.round(performance.now() - started), healthUrl: apiPath("/health"), health });
+      const health = testFirebaseConfiguration();
+      setStatus({
+        state: isCloudinaryConfigured ? "connected" : "partial",
+        latency: Math.round(performance.now() - started),
+        health,
+        cloudinary: isCloudinaryConfigured ? "configured" : "missing"
+      });
       return health;
     } catch (error) {
-      setStatus({ state: "disconnected", error: error.message, healthUrl: apiPath("/health") });
+      setStatus({
+        state: "disconnected",
+        error: error.message,
+        cloudinary: isCloudinaryConfigured ? "configured" : "missing"
+      });
       throw error;
     }
   }, []);

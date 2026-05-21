@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { authApi } from "./api/auth.api";
-import { projectsApi } from "./api/projects.api";
-import { usersApi } from "./api/users.api";
-import { settingsApi } from "./api/settings.api";
+import { loginUser, logoutUser, registerUser, subscribeToAuthState } from "./services/authService";
+import { createProject as createProjectRecord, getUserProjects } from "./services/projectService";
+import { updateMe } from "./services/userService";
+import { updateSettings } from "./services/settingsService";
 import { AuthContext } from "./store/authStore";
 import { ProjectContext } from "./store/projectStore";
 import { UiContext } from "./store/uiStore";
-import { setToken, clearToken, getToken, getUiPrefs, setUiPrefs } from "./utils/storage";
+import { getUiPrefs, setUiPrefs } from "./utils/storage";
 import { LAST_PROJECT_KEY } from "./utils/constants";
 import AppShell from "./components/layout/AppShell";
 import AuthGuard from "./components/auth/AuthGuard";
@@ -42,7 +42,7 @@ export default function App() {
   }, []);
 
   async function loadProjects() {
-    const data = await projectsApi.list();
+    const data = await getUserProjects();
     setProjects(data.projects || []);
     const lastProjectId = localStorage.getItem(LAST_PROJECT_KEY);
     const project = (data.projects || []).find((item) => item.id === lastProjectId);
@@ -50,38 +50,41 @@ export default function App() {
   }
 
   useEffect(() => {
-    async function boot() {
-      if (!getToken()) {
+    let unsubscribed = false;
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = subscribeToAuthState(async (nextUser) => {
+        if (unsubscribed) return;
+        setUser(nextUser);
+        setSettings(nextUser?.settings || getUiPrefs());
+        if (nextUser) await loadProjects();
+        else {
+          setProjects([]);
+          setActiveProject(null);
+        }
         setBooting(false);
-        return;
-      }
-      try {
-        const data = await authApi.me();
-        setUser(data.user);
-        setSettings(data.user?.settings || getUiPrefs());
-        await loadProjects();
-      } catch (_error) {
-        clearToken();
-      } finally {
-        setBooting(false);
-      }
+      });
+    } catch (error) {
+      toast(error.message);
+      setBooting(false);
     }
-    boot();
-  }, []);
+    return () => {
+      unsubscribed = true;
+      unsubscribe();
+    };
+  }, [toast]);
 
   const authValue = useMemo(() => ({
     user,
     async login(payload) {
-      const data = await authApi.login(payload);
-      setToken(data.token);
+      const data = await loginUser(payload);
       setUser(data.user);
       setSettings(data.user?.settings || {});
       await loadProjects();
       toast(`Bienvenido, ${data.user.username}.`);
     },
     async register(payload) {
-      const data = await authApi.register(payload);
-      setToken(data.token);
+      const data = await registerUser(payload);
       setUser(data.user);
       setSettings(data.user?.settings || {});
       await loadProjects();
@@ -89,9 +92,8 @@ export default function App() {
     },
     async logout() {
       try {
-        await authApi.logout();
+        await logoutUser();
       } finally {
-        clearToken();
         setUser(null);
         setProjects([]);
         setActiveProject(null);
@@ -104,7 +106,7 @@ export default function App() {
   const uiValue = useMemo(() => ({ toast, view, setView }), [toast, view]);
 
   async function createProject(payload) {
-    const data = await projectsApi.create(payload);
+    const data = await createProjectRecord(payload);
     setProjects((current) => [data.project, ...current]);
     setActiveProject(data.project);
     localStorage.setItem(LAST_PROJECT_KEY, data.project.id);
@@ -124,14 +126,14 @@ export default function App() {
     setSettings(next);
     setUiPrefs(next);
     try {
-      await settingsApi.update(payload);
+      await updateSettings(payload);
     } catch (error) {
       toast(error.message);
     }
   }
 
   async function saveProfile(payload) {
-    const data = await usersApi.updateMe(payload);
+    const data = await updateMe(payload);
     setUser(data.user);
     toast("Perfil actualizado.");
   }
