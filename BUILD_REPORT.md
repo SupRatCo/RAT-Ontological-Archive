@@ -356,3 +356,72 @@ Known limitations:
 - UI login/form automation is still limited by the Codex browser input issue, so full manual Firebase flows should be retested in a normal browser after deploy.
 - The Vite/Firebase bundle-size warning remains non-blocking.
 - Collaborator projects are still intentionally not restored in the sidebar until a rules-safe membership index is implemented.
+
+## IconsNew And Forum Functionality Pass
+
+Date: 2026-05-21
+
+User direction:
+
+- Use the attached mockups as direct visual reference.
+- Use `assets/IconsNew` instead of the older icon set.
+- Split forum into `Comunidad` and `Proyectos`.
+- Make post opening, likes, comments and saves functional.
+- Add project publication.
+
+Changes applied:
+
+- `AppIcon.jsx` now reads from:
+
+```txt
+client/public/assets/IconsNew/
+```
+
+using `import.meta.env.BASE_URL`, so routes are compatible with GitHub Pages under `/RAT-Ontological-Archive/`.
+
+- Removed use of the older copied `client/public/assets/Icons` folder.
+- `ForumFeed` now has two primary sections:
+  - Comunidad;
+  - Proyectos.
+- Community posts are stored with:
+
+```txt
+type: "community"
+sourceType: "normal"
+```
+
+- Project publications are stored with:
+
+```txt
+type: "project"
+sourceType: "project"
+sourceProjectId
+```
+
+- Project dashboard now includes `Publicar proyecto`.
+- Added post detail flow:
+  - open post;
+  - show full content;
+  - show author/date/type;
+  - like from detail;
+  - save from detail;
+  - load comments;
+  - create comments and append immediately.
+- Fixed save transaction logic to read the post before writing, keeping Firestore transaction ordering valid.
+- `getPost()` now decorates the opened post with current-user liked/saved state.
+- `getComments()` now normalizes author fields for display.
+- `firestore.indexes.json` now includes prepared indexes for `type + visibility + createdAt` and `type + visibility + likesCount`.
+
+Verification:
+
+```txt
+npm run build: passed
+Local Vite HTTP check: 200
+Browser startup after forum changes: passed
+Critical console errors on clean startup: none observed
+```
+
+Not fully verified in browser UI:
+
+- Creating posts/projects/comments through the visible form still needs manual browser testing because the Codex browser input automation cannot type into the app reliably in this environment.
+- Firebase/Firestore writes for forum were previously verified through authenticated REST tests; this pass verified compilation and startup, not full manual UI persistence.

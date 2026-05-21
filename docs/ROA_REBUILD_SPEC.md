@@ -21,6 +21,8 @@ The rebuild keeps the RAT mockup direction:
 - ROA Community forum panels;
 - compact buttons;
 - reduced animation.
+- icons from `client/public/assets/IconsNew/` via `AppIcon.jsx`;
+- configurable accent color and dark/light visual mode.
 
 ## Data Ownership
 
@@ -36,8 +38,28 @@ Cloudinary stores binary media. localStorage is limited to small UI preferences 
 - Documents.
 - Flexible Data Files with sections and fields.
 - Gallery uploads through Cloudinary.
-- Forum posts, comments, likes, and saves.
+- Forum split into `Comunidad` and `Proyectos`.
+- Forum posts, project publications, comments, likes, and saves.
 - Settings diagnostics for Firebase/Firestore/Cloudinary.
+
+## Forum Model
+
+Community posts use:
+
+```txt
+type: "community"
+sourceType: "normal"
+```
+
+Published projects use:
+
+```txt
+type: "project"
+sourceType: "project"
+sourceProjectId
+```
+
+All forum posts live in `forumPosts/{postId}` and use subcollections for comments, likes and saved state.
 
 ## Deployment
 

@@ -40,12 +40,14 @@ export async function createPost(data) {
   const ref = doc(collection(db, "forumPosts"));
   const post = {
     ...authorFromUser(user, profile),
+    type: data.type || (data.sourceType === "project" || data.source_type === "project" ? "project" : "community"),
     sourceType: data.source_type || data.sourceType || "normal",
     sourceProjectId: data.sourceProjectId || data.source_project_id || "",
     sourceDocumentId: data.source_document_id || data.sourceDocumentId || "",
     title: data.title.trim(),
     summary: data.summary || "",
     contentHtml: content,
+    coverUrl: data.coverUrl || data.cover_url || "",
     visibility: data.visibility || "public",
     likesCount: 0,
     commentsCount: 0,
@@ -69,7 +71,7 @@ export async function getMyPosts(uid = requireUser().uid) {
   return getPosts({ filter: "mine", uid });
 }
 
-export async function getSavedPosts(uid = requireUser().uid) {
+export async function getSavedPosts(uid = requireUser().uid, section = "community") {
   let savedSnapshot;
   try {
     savedSnapshot = await getDocs(query(collection(db, "forumPosts"), where("visibility", "==", "public"), orderBy("createdAt", "desc"), limit(50)));
@@ -82,11 +84,11 @@ export async function getSavedPosts(uid = requireUser().uid) {
     const saved = await getDoc(doc(db, "forumPosts", postDoc.id, "savedBy", uid));
     if (saved.exists()) posts.push(normalizePost({ id: postDoc.id, ...postDoc.data(), saved_by_current_user: true }));
   }
-  return { posts, page: { hasMore: false } };
+  return { posts: posts.filter((post) => (section === "projects" ? post.type === "project" : post.type !== "project")), page: { hasMore: false } };
 }
 
-export async function getPosts({ filter = "recent", q = "", limit: take = 20, uid = requireUser().uid } = {}) {
-  if (filter === "saved") return getSavedPosts(uid);
+export async function getPosts({ filter = "recent", section = "community", q = "", limit: take = 20, uid = requireUser().uid } = {}) {
+  if (filter === "saved") return getSavedPosts(uid, section);
   const constraints = filter === "mine" ? [] : [where("visibility", "==", "public")];
   if (filter === "mine") constraints.push(where("authorId", "==", uid));
   constraints.push(orderBy(filter === "popular" ? "likesCount" : "createdAt", "desc"), limit(take));
@@ -98,6 +100,7 @@ export async function getPosts({ filter = "recent", q = "", limit: take = 20, ui
     throw error;
   }
   let posts = normalizeList(snapshot).map(normalizePost);
+  posts = posts.filter((post) => (section === "projects" ? post.type === "project" : post.type !== "project"));
   if (q?.trim()) {
     const needle = q.trim().toLowerCase();
     posts = posts.filter((post) => `${post.title} ${post.summary} ${post.content_html} ${post.username}`.toLowerCase().includes(needle));
@@ -116,7 +119,12 @@ export async function getPosts({ filter = "recent", q = "", limit: take = 20, ui
 export async function getPost(postId) {
   const post = normalizePost(withId(await getDoc(doc(db, "forumPosts", postId))));
   if (!post) throw new Error("Publicación no encontrada.");
-  return { post };
+  const user = requireUser();
+  const [liked, saved] = await Promise.all([
+    getDoc(doc(db, "forumPosts", postId, "likes", user.uid)),
+    getDoc(doc(db, "forumPosts", postId, "savedBy", user.uid))
+  ]);
+  return { post: { ...post, liked_by_current_user: liked.exists(), saved_by_current_user: saved.exists() } };
 }
 
 export async function updatePost(postId, data) {
@@ -162,10 +170,11 @@ export async function toggleSave(postId, uid = requireUser().uid) {
   const saveRef = doc(db, "forumPosts", postId, "savedBy", uid);
   let saved = false;
   await runTransaction(db, async (transaction) => {
-    const saveSnap = await transaction.get(saveRef);
+    const [postSnap, saveSnap] = await Promise.all([transaction.get(postRef), transaction.get(saveRef)]);
+    if (!postSnap.exists()) throw new Error("PublicaciÃ³n no encontrada.");
     if (saveSnap.exists()) {
       transaction.delete(saveRef);
-      transaction.update(postRef, { savesCount: increment(-1) });
+      transaction.update(postRef, { savesCount: Math.max(Number(postSnap.data().savesCount || 0) - 1, 0) });
       saved = false;
     } else {
       transaction.set(saveRef, { uid, createdAt: serverTimestamp() });
@@ -186,6 +195,7 @@ export async function createComment(postId, data) {
   const comment = {
     authorId: user.uid,
     authorUsername: profile.username || "usuario",
+    authorDisplayName: profile.displayName || profile.username || "Usuario",
     authorAvatarUrl: profile.avatarUrl || "",
     parentCommentId: data.parentCommentId || data.parent_comment_id || "",
     content: data.content.trim(),
@@ -202,7 +212,13 @@ export async function createComment(postId, data) {
 
 export async function getComments(postId) {
   const snapshot = await getDocs(query(collection(db, "forumPosts", postId, "comments"), orderBy("createdAt", "asc")));
-  return { comments: normalizeList(snapshot) };
+  return { comments: normalizeList(snapshot).map((comment) => ({
+    ...comment,
+    username: comment.authorUsername,
+    display_name: comment.authorDisplayName || comment.authorUsername,
+    avatar_url: comment.authorAvatarUrl,
+    parent_comment_id: comment.parentCommentId
+  })) };
 }
 
 export async function deleteComment(postId, commentId) {
@@ -218,8 +234,11 @@ function normalizePost(post) {
     username: post.authorUsername,
     display_name: post.authorDisplayName,
     avatar_url: post.authorAvatarUrl,
+    type: post.type || (post.sourceType === "project" ? "project" : "community"),
     source_type: post.sourceType,
+    source_project_id: post.sourceProjectId,
     source_document_id: post.sourceDocumentId,
+    cover_url: post.coverUrl || post.cover_url || "",
     content_html: post.content_html || post.contentHtml || "",
     likes_count: post.likes_count ?? post.likesCount ?? 0,
     comments_count: post.comments_count ?? post.commentsCount ?? 0

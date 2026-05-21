@@ -19,6 +19,35 @@ The old static app and Express/PostgreSQL backend were moved to `legacy/` and ar
 - Hosting: GitHub Pages first, Firebase Hosting optional.
 - Legacy: `legacy/server-express-postgres/` and `legacy/static-app/`.
 
+## Current UI Direction
+
+The active frontend follows the RAT mockups directly:
+
+- dark space background;
+- strong yellow topbar;
+- compact dark-blue sidebar;
+- yellow FORUM button and project rail;
+- dark panels with yellow/blue borders;
+- centered settings modal;
+- ROA Forum split into `Comunidad` and `Proyectos`.
+
+Primary UI icons are loaded from:
+
+```txt
+client/public/assets/IconsNew/
+```
+
+through `client/src/components/ui/AppIcon.jsx`, using Vite `BASE_URL` so GitHub Pages paths stay valid.
+
+## Forum
+
+The forum supports two publication types:
+
+- `Comunidad`: normal community posts.
+- `Proyectos`: project publications created from a project dashboard or the forum project section.
+
+Posts support opening a detail view, comments, likes and saved state through Firestore subcollections.
+
 ## Local Setup
 
 ```bash

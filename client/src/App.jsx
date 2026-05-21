@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { loginUser, logoutUser, registerUser, subscribeToAuthState } from "./services/authService";
 import { createProject as createProjectRecord, getUserProjects } from "./services/projectService";
+import { createPost as createForumPost } from "./services/forumService";
 import { updateMe } from "./services/userService";
 import { updateSettings } from "./services/settingsService";
 import { AuthContext } from "./store/authStore";
@@ -13,6 +14,7 @@ import AuthGuard from "./components/auth/AuthGuard";
 import SettingsModal from "./components/settings/SettingsModal";
 import FriendsModal from "./components/social/FriendsModal";
 import ProjectCreateModal from "./components/projects/ProjectCreateModal";
+import ForumComposer from "./components/forum/ForumComposer";
 import { ToastList } from "./components/ui/Toast";
 import HomePage from "./pages/HomePage";
 import ForumPage from "./pages/ForumPage";
@@ -34,6 +36,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [socialOpen, setSocialOpen] = useState(false);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
+  const [publishProjectOpen, setPublishProjectOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
 
   const toast = useCallback((message) => {
@@ -166,6 +169,20 @@ export default function App() {
     toast("Proyecto creado.");
   }
 
+  async function publishProject(payload) {
+    if (!activeProject) return;
+    const data = await createForumPost({
+      ...payload,
+      type: "project",
+      sourceType: "project",
+      sourceProjectId: activeProject.id,
+      coverUrl: activeProject.coverUrl || activeProject.cover_url || "",
+      content_html: payload.content_html || payload.summary || activeProject.description || activeProject.name
+    });
+    setPublishProjectOpen(false);
+    toast(`Proyecto publicado: ${data.post.title}`);
+  }
+
   function openProject(project) {
     setActiveProject(project);
     localStorage.setItem(LAST_PROJECT_KEY, project.id);
@@ -191,7 +208,7 @@ export default function App() {
 
   function renderView() {
     if (view === "profile") return <ProfilePage user={user} />;
-    if (view === "project") return activeProject ? <ProjectPage project={activeProject} onModule={setView} /> : <HomePage onCreateProject={() => setCreateProjectOpen(true)} />;
+    if (view === "project") return activeProject ? <ProjectPage project={activeProject} onModule={setView} onPublishProject={() => setPublishProjectOpen(true)} /> : <HomePage onCreateProject={() => setCreateProjectOpen(true)} />;
     if (view === "docs") return <DocumentPage project={activeProject} toast={toast} />;
     if (view === "data") return <DataFilePage project={activeProject} toast={toast} />;
     if (view === "gallery") return <GalleryPage project={activeProject} toast={toast} />;
@@ -271,6 +288,19 @@ export default function App() {
             )}
             {socialOpen && <FriendsModal onClose={() => setSocialOpen(false)} />}
             {createProjectOpen && <ProjectCreateModal onClose={() => setCreateProjectOpen(false)} onCreate={createProject} />}
+            {publishProjectOpen && activeProject && (
+              <ForumComposer
+                title="Publicar proyecto"
+                submitLabel="Publicar proyecto"
+                initial={{
+                  title: activeProject.name || "",
+                  summary: activeProject.description || "",
+                  content_html: activeProject.description || activeProject.name || ""
+                }}
+                onClose={() => setPublishProjectOpen(false)}
+                onPublish={publishProject}
+              />
+            )}
           </AuthGuard>
           <ToastList toasts={toasts} />
         </UiContext.Provider>
