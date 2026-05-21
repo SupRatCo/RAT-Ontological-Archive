@@ -1,6 +1,6 @@
 .settings-layout {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-columns: 210px minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -17,6 +17,11 @@
   color: var(--roa-text);
   font-weight: 900;
   text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border-radius: var(--roa-radius-sm);
 }
 
 .settings-nav-item.active {
@@ -25,7 +30,7 @@
 }
 
 .settings-content {
-  min-height: 360px;
+  min-height: 420px;
   border: 1px solid var(--roa-border);
   border-radius: var(--roa-radius-sm);
   background: rgba(2, 18, 31, 0.38);
@@ -47,4 +52,87 @@
 .settings-check {
   grid-template-columns: auto 1fr;
   align-items: center;
+}
+
+.settings-section-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(156, 199, 232, 0.34);
+  border-radius: var(--roa-radius-sm);
+  background: rgba(6, 36, 58, 0.62);
+}
+
+.settings-section-title h3,
+.settings-section-title p {
+  margin: 0;
+}
+
+.settings-section-title h3 {
+  color: var(--roa-accent);
+  text-transform: uppercase;
+}
+
+.settings-option-group {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-option-label {
+  color: var(--roa-muted);
+  font-weight: 900;
+}
+
+.theme-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 10px;
+}
+
+.theme-swatch {
+  min-height: 76px;
+  border: 2px solid rgba(156, 199, 232, 0.34);
+  border-radius: var(--roa-radius-sm);
+  background: rgba(2, 18, 31, 0.62);
+  color: var(--roa-text);
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  font-weight: 900;
+}
+
+.theme-swatch.active {
+  border-color: var(--roa-accent);
+  background: rgba(255, 216, 0, 0.12);
+}
+
+.theme-swatch-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+}
+
+.segmented-control {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid var(--roa-border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(2, 18, 31, 0.74);
+}
+
+.segmented-control button {
+  min-width: 110px;
+  border: 0;
+  padding: 9px 18px;
+  color: var(--roa-text);
+  background: transparent;
+  font-weight: 900;
+}
+
+.segmented-control button.active {
+  color: #061828;
+  background: var(--roa-accent);
 }

@@ -2,6 +2,7 @@ import AppIcon from "../ui/AppIcon";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
 import EmptyState from "../ui/EmptyState";
+import { formatDate } from "../../utils/formatDate";
 
 export default function DataFileList({ dataFiles = [], onOpen, onCreate }) {
   return (
@@ -14,8 +15,13 @@ export default function DataFileList({ dataFiles = [], onOpen, onCreate }) {
         <div className="compact-grid">
           {dataFiles.map((file) => (
             <Card key={file.id} className="compact-card">
-              <AppIcon name="data" size={30} />
-              <h3>{file.title}</h3>
+              <div className="compact-card-heading">
+                <AppIcon name="data" size={30} />
+                <div>
+                  <h3>{file.title}</h3>
+                  <span>{formatDate(file.updated_at || file.updatedAt || file.created_at || file.createdAt)}</span>
+                </div>
+              </div>
               {file.description && <p>{file.description}</p>}
               <Button onClick={() => onOpen(file)}>Abrir</Button>
             </Card>

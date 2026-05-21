@@ -425,3 +425,52 @@ Not fully verified in browser UI:
 
 - Creating posts/projects/comments through the visible form still needs manual browser testing because the Codex browser input automation cannot type into the app reliably in this environment.
 - Firebase/Firestore writes for forum were previously verified through authenticated REST tests; this pass verified compilation and startup, not full manual UI persistence.
+
+## Zip Interface Design Integration Pass
+
+Date: 2026-05-21
+
+Source inspected:
+
+```txt
+C:\Users\juvic\Downloads\Interfaz RAT Ontological Archive.zip
+```
+
+Important finding:
+
+- The zip is a React/TypeScript visual prototype with mock data and lucide icons.
+- It was used as visual source of truth for layout, hierarchy, cards, settings, forum and dashboard styling.
+- It was not copied over the real app because that would replace Firebase/Firestore/Cloudinary logic with static mock screens.
+
+Changes applied to the real `client/` app:
+
+- Kept all functional services in `client/src/services/*`.
+- Ported visual ideas from the zip into existing JSX/CSS:
+  - stronger topbar geometry and logo chevron;
+  - sidebar project rail with accent bar and mockup-like project tiles;
+  - larger forum header panel and stronger post cards;
+  - project dashboard header with cover tile;
+  - document/data file cards with icon, date and summary;
+  - settings modal navigation with IconsNew icons;
+  - `Video` settings now uses swatches and segmented dark/light mode controls.
+- Fixed forum comments returned from `createComment()` so new comments are normalized like loaded comments.
+- Forum queries now filter by `type` (`community`/`project`) directly instead of loading mixed posts and filtering after the query.
+- Added Firestore indexes for `type + authorId + createdAt` and `type + authorId + likesCount`.
+- Cleaned visible forum error strings for Spanish accents.
+
+Verification:
+
+```txt
+cd client
+npm install: passed, 0 vulnerabilities
+npm run build: passed
+npm run dev: passed at http://127.0.0.1:5173/
+Browser smoke test: login page rendered
+Critical console errors: none observed
+Broken IconsNew images on login: none observed
+```
+
+Not fully verified:
+
+- Authenticated UI flows were not completed in this run because no test login session was provided and the in-app browser input path remains unreliable for forms.
+- Firestore writes for project publication/comment/like/save should be manually retested in a normal browser with a real account after deploying the updated rules/indexes.

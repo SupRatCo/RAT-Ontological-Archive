@@ -126,3 +126,9 @@ Firebase Hosting is prepared with `firebase.json`, but GitHub Pages remains the 
 - Settings diagnostics show Firebase/Firestore/Cloudinary instead of server health.
 
 See `BUILD_REPORT.md` for verified status and known limitations.
+
+## Visual Prototype Integration
+
+The visual prototype from `Interfaz RAT Ontological Archive.zip` was inspected and folded into the real app as design guidance, not as a replacement. Its TypeScript mock screens use static data, so the real `client/` components keep calling Firebase/Firestore/Cloudinary services while adopting the prototype's visual structure: yellow topbar, dark project rail, ROA forum panels, stronger dashboard cards, centered settings modal, and compact archive-style controls.
+
+Primary icons are loaded from `client/public/assets/IconsNew/` through `client/src/components/ui/AppIcon.jsx`, using `import.meta.env.BASE_URL` so GitHub Pages asset paths remain valid under `/RAT-Ontological-Archive/`.

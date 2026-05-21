@@ -16,11 +16,18 @@ const modules = [
 export default function ProjectDashboard({ project, onModule, onPublishProject }) {
   return (
     <section className="roa-panel project-dashboard">
-      <p className="forum-kicker">PROJECT ARCHIVE</p>
-      <h1 className="roa-panel-title">{project.name}</h1>
-      {project.description && <p className="project-summary">{project.description}</p>}
-      <div className="actions-row">
-        <Button variant="primary" onClick={onPublishProject}><AppIcon name="forum" />Publicar proyecto</Button>
+      <div className="project-hero">
+        <div className="project-cover">
+          {project.cover_url ? <img src={project.cover_url} alt="" /> : <AppIcon name="project" size={48} />}
+        </div>
+        <div className="project-hero-copy">
+          <p className="forum-kicker">PROJECT ARCHIVE</p>
+          <h1 className="roa-panel-title">{project.name}</h1>
+          {project.description && <p className="project-summary">{project.description}</p>}
+          <div className="actions-row">
+            <Button variant="primary" onClick={onPublishProject}><AppIcon name="forum" />Publicar proyecto</Button>
+          </div>
+        </div>
       </div>
       <div className="project-module-grid">
         {modules.map(([title, value, icon, description]) => (

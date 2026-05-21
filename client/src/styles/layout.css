@@ -39,6 +39,7 @@
   background: var(--roa-topbar);
   border-bottom: 5px solid var(--roa-sidebar);
   position: relative;
+  isolation: isolate;
 }
 
 .roa-topbar::after {
@@ -64,6 +65,20 @@
   text-transform: uppercase;
   background: var(--roa-topbar);
   clip-path: polygon(0 0, calc(100% - 44px) 0, 100% 50%, calc(100% - 44px) 100%, 0 100%);
+  position: relative;
+  z-index: 1;
+}
+
+.roa-logo::after {
+  content: "";
+  position: absolute;
+  right: -58px;
+  top: 0;
+  width: 66px;
+  height: 100%;
+  background: var(--roa-sidebar);
+  clip-path: polygon(0 0, 42% 0, 100% 50%, 42% 100%, 0 100%, 58% 50%);
+  pointer-events: none;
 }
 
 .roa-top-actions {
@@ -131,8 +146,8 @@
 }
 
 .roa-forum-button {
-  height: 70px;
-  border-radius: 0 38px 38px 0;
+  height: 72px;
+  border-radius: 0 42px 42px 0;
   border: 3px solid var(--roa-border-blue);
   background: var(--roa-accent);
   color: #0c2a49;
@@ -154,6 +169,8 @@
   display: grid;
   gap: 14px;
   padding-right: 4px;
+  border-left: 8px solid var(--roa-accent);
+  padding-left: 14px;
 }
 
 .roa-project-rail::-webkit-scrollbar {
@@ -197,6 +214,7 @@
 
 .roa-sidebar-project.active {
   box-shadow: inset 8px 0 0 #fff;
+  transform: translateX(4px);
 }
 
 .roa-sidebar-add {

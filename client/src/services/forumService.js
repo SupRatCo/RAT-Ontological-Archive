@@ -72,9 +72,10 @@ export async function getMyPosts(uid = requireUser().uid) {
 }
 
 export async function getSavedPosts(uid = requireUser().uid, section = "community") {
+  const type = section === "projects" ? "project" : "community";
   let savedSnapshot;
   try {
-    savedSnapshot = await getDocs(query(collection(db, "forumPosts"), where("visibility", "==", "public"), orderBy("createdAt", "desc"), limit(50)));
+    savedSnapshot = await getDocs(query(collection(db, "forumPosts"), where("type", "==", type), where("visibility", "==", "public"), orderBy("createdAt", "desc"), limit(50)));
   } catch (error) {
     console.error("[ROA Init] Failed loading forum", error);
     throw error;
@@ -84,13 +85,18 @@ export async function getSavedPosts(uid = requireUser().uid, section = "communit
     const saved = await getDoc(doc(db, "forumPosts", postDoc.id, "savedBy", uid));
     if (saved.exists()) posts.push(normalizePost({ id: postDoc.id, ...postDoc.data(), saved_by_current_user: true }));
   }
-  return { posts: posts.filter((post) => (section === "projects" ? post.type === "project" : post.type !== "project")), page: { hasMore: false } };
+  return { posts, page: { hasMore: false } };
 }
 
 export async function getPosts({ filter = "recent", section = "community", q = "", limit: take = 20, uid = requireUser().uid } = {}) {
   if (filter === "saved") return getSavedPosts(uid, section);
-  const constraints = filter === "mine" ? [] : [where("visibility", "==", "public")];
-  if (filter === "mine") constraints.push(where("authorId", "==", uid));
+  const type = section === "projects" ? "project" : "community";
+  const constraints = [where("type", "==", type)];
+  if (filter === "mine") {
+    constraints.push(where("authorId", "==", uid));
+  } else {
+    constraints.push(where("visibility", "==", "public"));
+  }
   constraints.push(orderBy(filter === "popular" ? "likesCount" : "createdAt", "desc"), limit(take));
   let snapshot;
   try {
@@ -100,7 +106,6 @@ export async function getPosts({ filter = "recent", section = "community", q = "
     throw error;
   }
   let posts = normalizeList(snapshot).map(normalizePost);
-  posts = posts.filter((post) => (section === "projects" ? post.type === "project" : post.type !== "project"));
   if (q?.trim()) {
     const needle = q.trim().toLowerCase();
     posts = posts.filter((post) => `${post.title} ${post.summary} ${post.content_html} ${post.username}`.toLowerCase().includes(needle));
@@ -171,7 +176,7 @@ export async function toggleSave(postId, uid = requireUser().uid) {
   let saved = false;
   await runTransaction(db, async (transaction) => {
     const [postSnap, saveSnap] = await Promise.all([transaction.get(postRef), transaction.get(saveRef)]);
-    if (!postSnap.exists()) throw new Error("PublicaciÃ³n no encontrada.");
+    if (!postSnap.exists()) throw new Error("Publicación no encontrada.");
     if (saveSnap.exists()) {
       transaction.delete(saveRef);
       transaction.update(postRef, { savesCount: Math.max(Number(postSnap.data().savesCount || 0) - 1, 0) });
@@ -207,18 +212,12 @@ export async function createComment(postId, data) {
   if (post.authorId !== user.uid) {
     await createNotification(post.authorId, { type: "comment", title: "Nuevo comentario", message: `${comment.authorUsername} comentó tu publicación.`, dataJson: { postId } });
   }
-  return { comment: { id: ref.id, ...comment }, commentsCount: Number(post.commentsCount || 0) + 1 };
+  return { comment: normalizeComment({ id: ref.id, ...comment }), commentsCount: Number(post.commentsCount || 0) + 1 };
 }
 
 export async function getComments(postId) {
   const snapshot = await getDocs(query(collection(db, "forumPosts", postId, "comments"), orderBy("createdAt", "asc")));
-  return { comments: normalizeList(snapshot).map((comment) => ({
-    ...comment,
-    username: comment.authorUsername,
-    display_name: comment.authorDisplayName || comment.authorUsername,
-    avatar_url: comment.authorAvatarUrl,
-    parent_comment_id: comment.parentCommentId
-  })) };
+  return { comments: normalizeList(snapshot).map(normalizeComment) };
 }
 
 export async function deleteComment(postId, commentId) {
@@ -241,7 +240,18 @@ function normalizePost(post) {
     cover_url: post.coverUrl || post.cover_url || "",
     content_html: post.content_html || post.contentHtml || "",
     likes_count: post.likes_count ?? post.likesCount ?? 0,
-    comments_count: post.comments_count ?? post.commentsCount ?? 0
+    comments_count: post.comments_count ?? post.commentsCount ?? 0,
+    saves_count: post.saves_count ?? post.savesCount ?? 0
+  };
+}
+
+function normalizeComment(comment) {
+  return {
+    ...comment,
+    username: comment.authorUsername,
+    display_name: comment.authorDisplayName || comment.authorUsername,
+    avatar_url: comment.authorAvatarUrl,
+    parent_comment_id: comment.parentCommentId
   };
 }
 

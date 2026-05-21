@@ -24,6 +24,14 @@ The rebuild keeps the RAT mockup direction:
 - icons from `client/public/assets/IconsNew/` via `AppIcon.jsx`;
 - configurable accent color and dark/light visual mode.
 
+The zip prototype `Interfaz RAT Ontological Archive.zip` is treated as visual reference only. Its TypeScript screens and mock arrays should not replace the functional JSX screens. When porting design from the prototype, preserve the real service-backed data flow:
+
+```txt
+components -> services -> Firebase Auth / Cloud Firestore / Cloudinary
+```
+
+Do not introduce static prototype data into production screens.
+
 ## Data Ownership
 
 Firestore is the source of truth for users, projects, documents, data files, forum content, and media metadata.
@@ -71,3 +79,4 @@ GitHub Pages is the primary deployment target. Firebase Hosting is configured as
 - Admin Cloudinary cleanup path for physical deletion.
 - Stronger moderation tools.
 - More granular Firestore rules after real multiuser testing.
+- Manual authenticated UI retest after every large visual migration.

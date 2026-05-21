@@ -2,6 +2,8 @@ import AppIcon from "../ui/AppIcon";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
 import EmptyState from "../ui/EmptyState";
+import { formatDate } from "../../utils/formatDate";
+import { stripHtml } from "../../utils/sanitize";
 
 export default function DocumentList({ documents = [], onOpen, onCreate, onDelete }) {
   return (
@@ -14,8 +16,14 @@ export default function DocumentList({ documents = [], onOpen, onCreate, onDelet
         <div className="compact-grid">
           {documents.map((doc) => (
             <Card key={doc.id} className="compact-card">
-              <AppIcon name="document" size={30} />
-              <h3>{doc.title}</h3>
+              <div className="compact-card-heading">
+                <AppIcon name="document" size={30} />
+                <div>
+                  <h3>{doc.title}</h3>
+                  <span>{formatDate(doc.updated_at || doc.updatedAt || doc.created_at || doc.createdAt)}</span>
+                </div>
+              </div>
+              <p>{stripHtml(doc.content_html || doc.contentHtml || "").slice(0, 120) || "Documento sin contenido."}</p>
               <div className="actions-row">
                 <Button onClick={() => onOpen(doc)}>Abrir</Button>
                 <Button variant="danger" onClick={() => onDelete(doc)}><AppIcon name="delete" size={16} />Eliminar</Button>

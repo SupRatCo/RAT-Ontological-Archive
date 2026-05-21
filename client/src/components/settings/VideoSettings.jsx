@@ -1,12 +1,13 @@
 import Select from "../ui/Select";
+import AppIcon from "../ui/AppIcon";
 
 const themeColors = [
-  ["gold", "Dorado"],
-  ["purple", "Morado"],
-  ["blue", "Azul"],
-  ["cyan", "Celeste"],
-  ["red", "Rojo"],
-  ["green", "Verde"]
+  ["gold", "Dorado", "#ffd800"],
+  ["purple", "Morado", "#9b5cff"],
+  ["blue", "Azul", "#277cff"],
+  ["cyan", "Celeste", "#31d6ff"],
+  ["red", "Rojo", "#ff3f4f"],
+  ["green", "Verde", "#36ff88"]
 ];
 
 export default function VideoSettings({ settings, onChange }) {
@@ -16,17 +17,39 @@ export default function VideoSettings({ settings, onChange }) {
 
   return (
     <div className="settings-section">
-      <label>Tema de color
-        <Select value={themeColor} onChange={(event) => onChange({ themeColor: event.target.value, theme_color: event.target.value })}>
-          {themeColors.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-        </Select>
-      </label>
-      <label>Modo visual
-        <Select value={visualMode} onChange={(event) => onChange({ visualMode: event.target.value, visual_mode: event.target.value })}>
-          <option value="dark">Oscuro</option>
-          <option value="light">Claro</option>
-        </Select>
-      </label>
+      <div className="settings-section-title">
+        <AppIcon name="video" size={24} />
+        <div>
+          <h3>Configuración visual</h3>
+          <p>Color, contraste y rendimiento de la interfaz.</p>
+        </div>
+      </div>
+
+      <div className="settings-option-group">
+        <span className="settings-option-label">Tema de color</span>
+        <div className="theme-swatch-grid">
+          {themeColors.map(([value, label, color]) => (
+            <button
+              key={value}
+              className={`theme-swatch ${themeColor === value ? "active" : ""}`}
+              type="button"
+              onClick={() => onChange({ themeColor: value, theme_color: value })}
+            >
+              <span className="theme-swatch-dot" style={{ backgroundColor: color }} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-option-group">
+        <span className="settings-option-label">Modo visual</span>
+        <div className="segmented-control">
+          <button className={visualMode === "dark" ? "active" : ""} type="button" onClick={() => onChange({ visualMode: "dark", visual_mode: "dark" })}>Oscuro</button>
+          <button className={visualMode === "light" ? "active" : ""} type="button" onClick={() => onChange({ visualMode: "light", visual_mode: "light" })}>Claro</button>
+        </div>
+      </div>
+
       <label>Calidad visual
         <Select value={settings.visualQuality || settings.visual_quality || "medium"} onChange={(event) => onChange({ visualQuality: event.target.value, visual_quality: event.target.value })}>
           <option value="high">Alta</option>

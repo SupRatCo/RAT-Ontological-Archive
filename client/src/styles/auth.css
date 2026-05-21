@@ -7,6 +7,7 @@
 
 .auth-card {
   width: min(460px, 100%);
+  border-width: 2px;
 }
 
 .auth-card h1 {
@@ -23,4 +24,24 @@
 .auth-switch {
   margin-top: 14px;
   color: var(--roa-muted);
+}
+
+.auth-logo-block {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  border-bottom: 1px solid rgba(156, 199, 232, 0.32);
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+}
+
+.auth-logo-mark {
+  width: 62px;
+  height: 62px;
+  border: 2px solid var(--roa-border);
+  border-radius: var(--roa-radius-sm);
+  background: rgba(255, 216, 0, 0.14);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
 }

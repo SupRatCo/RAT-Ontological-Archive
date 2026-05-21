@@ -3,6 +3,7 @@ import LoginForm from "../components/auth/LoginForm";
 import RegisterForm from "../components/auth/RegisterForm";
 import Panel from "../components/ui/Panel";
 import Button from "../components/ui/Button";
+import AppIcon from "../components/ui/AppIcon";
 import useAuth from "../hooks/useAuth";
 
 export default function LoginPage() {
@@ -28,8 +29,13 @@ export default function LoginPage() {
   return (
     <div className="roa-app auth-page">
       <Panel className="auth-card">
-        <h1>RAT Ontological Archive</h1>
-        <p>Archivo narrativo online-first.</p>
+        <div className="auth-logo-block">
+          <div className="auth-logo-mark"><AppIcon name="archive" size={34} /></div>
+          <div>
+            <h1>RAT Ontological Archive</h1>
+            <p>Archivo narrativo online-first.</p>
+          </div>
+        </div>
         {mode === "login" ? <LoginForm onSubmit={submit} loading={loading} /> : <RegisterForm onSubmit={submit} loading={loading} />}
         {error && <p style={{ color: "var(--roa-danger)" }}>{error}</p>}
         <p className="auth-switch">
