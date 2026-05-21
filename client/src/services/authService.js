@@ -40,9 +40,58 @@ export async function getUserBundle(firebaseUser = auth?.currentUser) {
   assertFirebaseReady();
   if (!firebaseUser) return null;
 
-  const userSnap = await getDoc(doc(db, "users", firebaseUser.uid));
-  if (!userSnap.exists()) return null;
-  const settingsSnap = await getDoc(doc(db, "userSettings", firebaseUser.uid));
+  let userSnap;
+  try {
+    userSnap = await getDoc(doc(db, "users", firebaseUser.uid));
+  } catch (error) {
+    console.error("[ROA Init] Failed loading user profile", error);
+    throw error;
+  }
+
+  if (!userSnap.exists()) {
+    const fallbackName = firebaseUser.email?.split("@")[0] || "usuario";
+    const now = serverTimestamp();
+    try {
+      await setDoc(doc(db, "users", firebaseUser.uid), {
+        uid: firebaseUser.uid,
+        username: fallbackName,
+        usernameLower: fallbackName.toLowerCase(),
+        email: firebaseUser.email || "",
+        displayName: fallbackName,
+        avatarUrl: "",
+        bannerUrl: "",
+        bio: "",
+        accentColor: "#ffd800",
+        createdAt: now,
+        updatedAt: now
+      }, { merge: true });
+      userSnap = await getDoc(doc(db, "users", firebaseUser.uid));
+    } catch (error) {
+      console.error("[ROA Init] Failed creating missing user profile", error);
+      throw error;
+    }
+  }
+
+  let settingsSnap;
+  try {
+    settingsSnap = await getDoc(doc(db, "userSettings", firebaseUser.uid));
+    if (!settingsSnap.exists()) {
+      await setDoc(doc(db, "userSettings", firebaseUser.uid), {
+        language: "es-LATAM",
+        theme: "default",
+        reducedMotion: true,
+        visualQuality: "medium",
+        audioVolume: 50,
+        settingsJson: {},
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      settingsSnap = await getDoc(doc(db, "userSettings", firebaseUser.uid));
+    }
+  } catch (error) {
+    console.error("[ROA Init] Failed loading settings", error);
+    throw error;
+  }
+
   return publicUser(firebaseUser, withId(userSnap), settingsSnap.exists() ? settingsSnap.data() : {});
 }
 
@@ -111,10 +160,15 @@ export async function logoutUser() {
   await signOut(auth);
 }
 
-export function subscribeToAuthState(callback) {
+export function subscribeToAuthState(callback, onError) {
   assertFirebaseReady();
   return onAuthStateChanged(auth, async (firebaseUser) => {
-    callback(firebaseUser ? await getUserBundle(firebaseUser) : null);
+    try {
+      await callback(firebaseUser ? await getUserBundle(firebaseUser) : null);
+    } catch (error) {
+      console.error("[ROA Init] Failed restoring auth state", error);
+      onError?.(error);
+    }
   });
 }
 

@@ -1,6 +1,5 @@
 import {
   collection,
-  collectionGroup,
   deleteDoc,
   doc,
   getDoc,
@@ -45,18 +44,15 @@ export async function getProject(projectId) {
 }
 
 export async function getUserProjects(uid = requireUser().uid) {
-  const memberSnapshot = await getDocs(query(collectionGroup(db, "members"), where("uid", "==", uid)));
-  const projectRefs = memberSnapshot.docs
-    .map((memberDoc) => memberDoc.ref.parent.parent)
-    .filter(Boolean);
-
-  const projects = [];
-  for (const projectRef of projectRefs) {
-    const snapshot = await getDoc(projectRef);
-    const project = withId(snapshot);
-    if (project) projects.push(project);
+  let ownedSnapshot;
+  try {
+    ownedSnapshot = await getDocs(query(collection(db, "projects"), where("ownerId", "==", uid)));
+  } catch (error) {
+    console.error("[ROA Init] Failed loading projects", error);
+    throw error;
   }
 
+  const projects = normalizeList(ownedSnapshot);
   projects.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
   return { projects };
 }

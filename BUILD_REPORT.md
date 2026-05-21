@@ -180,3 +180,88 @@ No project/document/media/forum cache was observed during the tested load.
    - upload avatar and gallery image.
 3. Consider splitting Firebase code into lazy chunks to remove the Vite bundle warning.
 4. Keep `client/.env` local only. Do not commit it.
+
+## Initialization Permission Stabilization
+
+Date: 2026-05-21
+
+Reported issue:
+
+```txt
+The published app stayed on "Inicializando archivo..."
+FirebaseError: Missing or insufficient permissions.
+```
+
+Root cause found:
+
+- The auth initialization callback could throw before `setBooting(false)` ran. Any Firestore permission error during session restore left the app permanently in the loading state.
+- `getUserProjects()` used a `collectionGroup("members")` query. That query is fragile under production Firestore rules because rules must prove every possible document in the collection group is readable.
+- The saved-posts forum loader used an open `forumPosts` read. If private posts exist, that query can be rejected because the rule only allows public posts or posts authored by the current user.
+
+Corrections applied:
+
+- `client/src/App.jsx`
+  - Added controlled initialization error state.
+  - Wrapped auth/session initialization in `try/catch/finally`.
+  - Added a visible recovery panel with Reintentar, Cerrar sesión, and Limpiar datos locales.
+  - `lastProjectId` is now removed if the project is missing or no longer readable, then the app returns to forum/home instead of hanging.
+- `client/src/services/authService.js`
+  - `subscribeToAuthState()` now awaits async callbacks and reports initialization errors.
+  - `getUserBundle()` logs safe initialization failures for `users/{uid}` and `userSettings/{uid}`.
+  - Missing user/settings docs are created with safe defaults when rules allow it.
+- `client/src/services/projectService.js`
+  - Replaced the collection-group membership query with a safer owner query:
+
+```txt
+projects where ownerId == current uid
+```
+
+  - This avoids the production permission-denied during startup.
+  - Temporary limitation: collaborator projects are not loaded into the sidebar by this query yet. A future pass should add a dedicated `userProjectMemberships/{uid}/projects/{projectId}` index or another rules-compatible membership lookup.
+- `client/src/services/forumService.js`
+  - Saved-post and feed queries now filter public posts explicitly before ordering.
+  - Forum load failures log `[ROA Init] Failed loading forum`.
+- `firestore.rules`
+  - Project reads now allow the owner directly via `resource.data.ownerId == request.auth.uid`, in addition to public/member access.
+
+Safe logs added:
+
+```txt
+[ROA Init] Failed loading user profile
+[ROA Init] Failed loading settings
+[ROA Init] Failed loading projects
+[ROA Init] Failed loading forum
+[ROA Init] Initialization failed
+```
+
+Verification:
+
+```txt
+npm run build: passed
+Local Vite HTTP check: 200
+Browser startup at http://127.0.0.1:5173/: passed
+Stuck on "Inicializando archivo...": no
+Visible init error on clean startup: no
+Critical console errors on clean startup: none observed
+```
+
+Build warning remains non-blocking:
+
+```txt
+Some chunks are larger than 500 kB after minification.
+```
+
+Blocked/not fully re-tested:
+
+- UI login/reload with an active browser Firebase session could not be completed through the Codex browser because its input automation failed with the known virtual clipboard limitation.
+- The project query now loads owned projects only. Collaborator-project loading needs a rules-safe index strategy before being restored.
+
+Deploy note:
+
+- The updated `firestore.rules` must be deployed to Firebase for the published GitHub Pages app to receive the permission fix.
+- After deploying rules and frontend changes, retest:
+  - refresh with an active session;
+  - refresh after clearing `lastProjectId`;
+  - enter forum;
+  - open an owned project;
+  - verify no infinite loading state appears.

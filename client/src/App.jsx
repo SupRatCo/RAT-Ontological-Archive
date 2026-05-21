@@ -30,6 +30,7 @@ export default function App() {
   const [view, setView] = useState("forum");
   const [search, setSearch] = useState("");
   const [booting, setBooting] = useState(true);
+  const [initError, setInitError] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [socialOpen, setSocialOpen] = useState(false);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
@@ -43,31 +44,60 @@ export default function App() {
 
   async function loadProjects() {
     const data = await getUserProjects();
-    setProjects(data.projects || []);
+    const nextProjects = data.projects || [];
+    setProjects(nextProjects);
     const lastProjectId = localStorage.getItem(LAST_PROJECT_KEY);
-    const project = (data.projects || []).find((item) => item.id === lastProjectId);
-    if (project) setActiveProject(project);
+    const project = nextProjects.find((item) => item.id === lastProjectId);
+    if (project) {
+      setActiveProject(project);
+      return nextProjects;
+    }
+    if (lastProjectId) {
+      localStorage.removeItem(LAST_PROJECT_KEY);
+      setActiveProject(null);
+      setView("forum");
+    }
+    return nextProjects;
   }
 
   useEffect(() => {
     let unsubscribed = false;
     let unsubscribe = () => {};
-    try {
-      unsubscribe = subscribeToAuthState(async (nextUser) => {
-        if (unsubscribed) return;
+    unsubscribe = subscribeToAuthState(async (nextUser) => {
+      if (unsubscribed) return;
+      setInitError("");
+      try {
         setUser(nextUser);
         setSettings(nextUser?.settings || getUiPrefs());
-        if (nextUser) await loadProjects();
-        else {
+        if (nextUser) {
+          try {
+            await loadProjects();
+          } catch (error) {
+            console.error("[ROA Init] Failed loading projects", error);
+            setProjects([]);
+            setActiveProject(null);
+            localStorage.removeItem(LAST_PROJECT_KEY);
+            setView("forum");
+            setInitError("No se pudieron cargar tus proyectos por permisos. Puedes reintentar o cerrar sesión.");
+          }
+        } else {
           setProjects([]);
           setActiveProject(null);
+          setView("forum");
         }
+      } catch (error) {
+        console.error("[ROA Init] Initialization failed", error);
+        setInitError(error.message || "No se pudo inicializar RAT Ontological Archive.");
+      } finally {
+        if (unsubscribed) return;
         setBooting(false);
-      });
-    } catch (error) {
-      toast(error.message);
+      }
+    }, (error) => {
+      if (unsubscribed) return;
+      console.error("[ROA Init] Initialization failed", error);
+      setInitError(error.message || "No se pudo restaurar la sesión.");
       setBooting(false);
-    }
+    });
     return () => {
       unsubscribed = true;
       unsubscribe();
@@ -80,14 +110,26 @@ export default function App() {
       const data = await loginUser(payload);
       setUser(data.user);
       setSettings(data.user?.settings || {});
-      await loadProjects();
+      setInitError("");
+      try {
+        await loadProjects();
+      } catch (error) {
+        console.error("[ROA Init] Failed loading projects", error);
+        setInitError("Sesión iniciada, pero no se pudieron cargar tus proyectos por permisos.");
+      }
       toast(`Bienvenido, ${data.user.username}.`);
     },
     async register(payload) {
       const data = await registerUser(payload);
       setUser(data.user);
       setSettings(data.user?.settings || {});
-      await loadProjects();
+      setInitError("");
+      try {
+        await loadProjects();
+      } catch (error) {
+        console.error("[ROA Init] Failed loading projects", error);
+        setInitError("Cuenta creada, pero no se pudieron cargar tus proyectos por permisos.");
+      }
       toast(`Cuenta creada, ${data.user.username}.`);
     },
     async logout() {
@@ -148,6 +190,44 @@ export default function App() {
   }
 
   if (booting) return <div className="roa-app auth-page"><div className="roa-panel">Inicializando archivo...</div></div>;
+
+  if (initError) {
+    return (
+      <div className="roa-app auth-page">
+        <div className="roa-panel auth-card">
+          <p className="eyebrow">ROA INIT</p>
+          <h1>No se pudo cargar el archivo</h1>
+          <p>{initError}</p>
+          <div className="actions-row">
+            <button className="roa-btn primary" type="button" onClick={() => window.location.reload()}>
+              Reintentar
+            </button>
+            <button className="roa-btn" type="button" onClick={async () => {
+              try {
+                await logoutUser();
+              } finally {
+                setUser(null);
+                setProjects([]);
+                setActiveProject(null);
+                setInitError("");
+                setView("forum");
+              }
+            }}>
+              Cerrar sesión
+            </button>
+            <button className="roa-btn" type="button" onClick={() => {
+              localStorage.removeItem(LAST_PROJECT_KEY);
+              setInitError("");
+              setView("forum");
+              window.location.reload();
+            }}>
+              Limpiar datos locales
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={authValue}>

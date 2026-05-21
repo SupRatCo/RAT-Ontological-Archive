@@ -70,7 +70,13 @@ export async function getMyPosts(uid = requireUser().uid) {
 }
 
 export async function getSavedPosts(uid = requireUser().uid) {
-  const savedSnapshot = await getDocs(collection(db, "forumPosts"));
+  let savedSnapshot;
+  try {
+    savedSnapshot = await getDocs(query(collection(db, "forumPosts"), where("visibility", "==", "public"), orderBy("createdAt", "desc"), limit(50)));
+  } catch (error) {
+    console.error("[ROA Init] Failed loading forum", error);
+    throw error;
+  }
   const posts = [];
   for (const postDoc of savedSnapshot.docs) {
     const saved = await getDoc(doc(db, "forumPosts", postDoc.id, "savedBy", uid));
@@ -84,7 +90,13 @@ export async function getPosts({ filter = "recent", q = "", limit: take = 20, ui
   const constraints = filter === "mine" ? [] : [where("visibility", "==", "public")];
   if (filter === "mine") constraints.push(where("authorId", "==", uid));
   constraints.push(orderBy(filter === "popular" ? "likesCount" : "createdAt", "desc"), limit(take));
-  const snapshot = await getDocs(query(collection(db, "forumPosts"), ...constraints));
+  let snapshot;
+  try {
+    snapshot = await getDocs(query(collection(db, "forumPosts"), ...constraints));
+  } catch (error) {
+    console.error("[ROA Init] Failed loading forum", error);
+    throw error;
+  }
   let posts = normalizeList(snapshot).map(normalizePost);
   if (q?.trim()) {
     const needle = q.trim().toLowerCase();

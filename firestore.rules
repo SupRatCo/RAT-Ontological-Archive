@@ -50,7 +50,7 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-      allow read: if resource.data.visibility == "public" || member(projectId);
+      allow read: if resource.data.visibility == "public" || resource.data.ownerId == request.auth.uid || member(projectId);
       allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
       allow update: if editor(projectId);
       allow delete: if owner(projectId);
