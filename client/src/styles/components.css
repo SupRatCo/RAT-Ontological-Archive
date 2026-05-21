@@ -17,6 +17,10 @@
   background: var(--roa-panel-2);
   color: var(--roa-text);
   font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .roa-btn.primary {
@@ -40,6 +44,27 @@
   background: transparent;
   color: #061828;
   font-weight: 900;
+}
+
+.app-icon {
+  display: inline-block;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.roa-icon-btn .app-icon,
+.roa-topbar .app-icon {
+  filter: brightness(0) saturate(100%) invert(8%) sepia(46%) saturate(1517%) hue-rotate(170deg) brightness(95%) contrast(103%);
+}
+
+.roa-btn .app-icon,
+.roa-card .app-icon,
+.roa-panel .app-icon {
+  filter: brightness(0) invert(1);
+}
+
+.roa-btn.primary .app-icon {
+  filter: brightness(0) saturate(100%) invert(8%) sepia(46%) saturate(1517%) hue-rotate(170deg) brightness(95%) contrast(103%);
 }
 
 .roa-input,
@@ -138,7 +163,7 @@
 }
 
 .roa-modal {
-  width: min(980px, 96vw);
+  width: min(1050px, 92vw);
   max-height: min(760px, 92vh);
   overflow: auto;
   background: var(--roa-panel);
@@ -158,9 +183,12 @@
 }
 
 .roa-modal-header h2 {
+  flex: 1;
+  text-align: center;
   margin: 0;
   color: var(--roa-accent);
   text-transform: uppercase;
+  font-size: clamp(28px, 4vw, 44px);
 }
 
 .roa-toast-list {
@@ -185,4 +213,47 @@
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 18px;
+}
+
+.project-module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.project-module-card {
+  display: grid;
+  gap: 8px;
+}
+
+.project-module-card h3,
+.project-module-card p {
+  margin: 0;
+}
+
+.project-module-card h3 {
+  color: var(--roa-accent);
+  text-transform: uppercase;
+}
+
+.project-summary {
+  max-width: 760px;
+  color: var(--roa-muted);
+}
+
+.compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.compact-card {
+  display: grid;
+  gap: 10px;
+}
+
+.compact-card h3 {
+  margin: 0;
+  color: var(--roa-accent);
 }

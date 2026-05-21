@@ -62,6 +62,12 @@
   flex-wrap: wrap;
 }
 
+.forum-post-date {
+  margin-left: auto;
+  color: var(--roa-muted);
+  font-weight: 800;
+}
+
 .comment-thread {
   display: grid;
   gap: 12px;

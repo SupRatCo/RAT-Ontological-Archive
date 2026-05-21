@@ -1,0 +1,90 @@
+[data-theme-color="gold"] {
+  --roa-topbar: #ffd800;
+  --roa-accent: #ffd800;
+  --roa-accent-soft: rgba(255, 216, 0, 0.35);
+  --roa-border: #ffd800;
+}
+
+[data-theme-color="purple"] {
+  --roa-topbar: #9b5cff;
+  --roa-accent: #b68cff;
+  --roa-accent-soft: rgba(155, 92, 255, 0.35);
+  --roa-border: #b68cff;
+}
+
+[data-theme-color="blue"] {
+  --roa-topbar: #277cff;
+  --roa-accent: #5da1ff;
+  --roa-accent-soft: rgba(39, 124, 255, 0.35);
+  --roa-border: #5da1ff;
+}
+
+[data-theme-color="cyan"] {
+  --roa-topbar: #31d6ff;
+  --roa-accent: #55e1ff;
+  --roa-accent-soft: rgba(49, 214, 255, 0.35);
+  --roa-border: #55e1ff;
+}
+
+[data-theme-color="red"] {
+  --roa-topbar: #ff4658;
+  --roa-accent: #ff6b78;
+  --roa-accent-soft: rgba(255, 70, 88, 0.35);
+  --roa-border: #ff6b78;
+}
+
+[data-theme-color="green"] {
+  --roa-topbar: #36ff88;
+  --roa-accent: #57ffa0;
+  --roa-accent-soft: rgba(54, 255, 136, 0.32);
+  --roa-border: #57ffa0;
+}
+
+[data-visual-mode="dark"] {
+  color-scheme: dark;
+  --roa-bg: #020b14;
+  --roa-panel: #041a2b;
+  --roa-panel-2: #06243a;
+  --roa-sidebar: #021625;
+  --roa-text: #edf6ff;
+  --roa-muted: #9fb6cc;
+  --roa-border-blue: #9cc7e8;
+}
+
+[data-visual-mode="light"] {
+  color-scheme: light;
+  --roa-bg: #edf3f7;
+  --roa-panel: rgba(255, 255, 255, 0.96);
+  --roa-panel-2: #dce8f3;
+  --roa-sidebar: #12304a;
+  --roa-text: #06131f;
+  --roa-muted: #526b82;
+  --roa-border-blue: #245f90;
+  --roa-shadow: 0 12px 28px rgba(16, 45, 72, 0.18);
+}
+
+[data-visual-mode="light"] .roa-app {
+  background:
+    linear-gradient(rgba(237, 243, 247, 0.64), rgba(237, 243, 247, 0.84)),
+    radial-gradient(circle at 72% 44%, rgba(108, 135, 190, 0.2), transparent 28%),
+    #edf3f7;
+}
+
+[data-visual-mode="light"] .roa-app::before {
+  opacity: 0.13;
+  filter: invert(1);
+}
+
+[data-visual-mode="light"] .docs-page {
+  background: #ffffff;
+  color: #06131f;
+}
+
+[data-reduced-motion="true"] *,
+[data-reduced-motion="true"] *::before,
+[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}

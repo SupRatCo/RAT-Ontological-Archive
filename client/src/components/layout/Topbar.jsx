@@ -1,3 +1,4 @@
+import AppIcon from "../ui/AppIcon";
 import IconButton from "../ui/IconButton";
 
 function Avatar({ user }) {
@@ -17,17 +18,17 @@ export default function Topbar({ user, onForum, onSettings, onSocial, onProfile,
         RAT<br />Ontological<br />Archive
       </button>
       <div className="roa-top-actions">
-        <IconButton label="Configuración" onClick={onSettings}>⚙</IconButton>
-        <IconButton label="Social" onClick={onSocial}>👥</IconButton>
+        <IconButton label="Configuracion" onClick={onSettings}><AppIcon name="settings" size={25} /></IconButton>
+        <IconButton label="Social" onClick={onSocial}><AppIcon name="social" size={25} /></IconButton>
       </div>
       <label className="roa-global-search">
-        <span aria-hidden="true" style={{ fontSize: 36 }}>⌕</span>
+        <AppIcon name="search" size={36} />
         <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Buscar" />
       </label>
       <button className="roa-btn" onClick={onProfile} type="button">
         {user?.profile?.display_name || user?.username || "USERNAME"}
       </button>
-      <button className="roa-user-chip" onClick={onProfile} type="button">
+      <button className="roa-user-chip" onClick={onProfile} type="button" aria-label="Perfil">
         <Avatar user={user} />
       </button>
     </header>

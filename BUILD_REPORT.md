@@ -265,3 +265,94 @@ Deploy note:
   - enter forum;
   - open an owned project;
   - verify no infinite loading state appears.
+
+## Visual Redesign And Icon Pass
+
+Date: 2026-05-21
+
+Reference target:
+
+- Space background, compact yellow topbar, dark-blue left rail, large FORUM button, project cards in the sidebar, ROA Forum/Community panel, yellow-bordered cards and centered configuration modal.
+
+Changes applied:
+
+- Added a centralized icon component:
+
+```txt
+client/src/components/ui/AppIcon.jsx
+```
+
+- Moved the available icon pack into the Vite public path:
+
+```txt
+client/public/assets/Icons/
+```
+
+This keeps icon URLs compatible with GitHub Pages through `import.meta.env.BASE_URL`.
+
+- Replaced visible emoji-style UI icons in:
+  - topbar settings/social/search;
+  - sidebar forum/create/project entries;
+  - project dashboard modules;
+  - forum like/comment/save buttons;
+  - document list/toolbar;
+  - gallery cards/upload action;
+  - settings logout/close action;
+  - Data File actions.
+
+- Added `client/src/styles/themes.css`.
+  - `themeColor`: `gold`, `purple`, `blue`, `cyan`, `red`, `green`.
+  - `visualMode`: `dark`, `light`.
+  - `reducedMotion`: document-level reduced transition handling.
+
+- `App.jsx` now applies:
+
+```txt
+document.documentElement.dataset.themeColor
+document.documentElement.dataset.visualMode
+document.documentElement.dataset.reducedMotion
+```
+
+- `Configuracion > Video` now exposes real controls for:
+  - Tema de color;
+  - Modo visual oscuro/claro;
+  - Calidad visual;
+  - Reducir animaciones.
+
+- Redesign/polish pass started for:
+  - topbar proportions and icons;
+  - sidebar project buttons;
+  - settings modal layout;
+  - project dashboard cards;
+  - forum post actions;
+  - document list/editor;
+  - data-file editor with field type picker and section rename/delete;
+  - gallery card metadata display.
+
+Functional work completed in this pass:
+
+- Documents:
+  - added title editing in the editor;
+  - added document deletion;
+  - kept Firestore save path through `documentService.updateDocument`.
+
+- Archivos de Datos:
+  - added visible field type picker when creating fields;
+  - added section rename;
+  - added field deletion;
+  - improved rendering for `short_text`, `long_text`, `number`, `checkbox`, `list`, `select`, `date`, `url`, `image`, `tag`, and `relation`.
+
+Verification:
+
+```txt
+npm run build: passed
+Local Vite HTTP check: 200
+Browser startup at http://127.0.0.1:5173/: passed
+Critical console errors on clean startup: none observed
+```
+
+Known limitations:
+
+- UI login/form automation is still limited by the Codex browser input issue, so full manual Firebase flows should be retested in a normal browser after deploy.
+- The Vite/Firebase bundle-size warning remains non-blocking.
+- Collaborator projects are still intentionally not restored in the sidebar until a rules-safe membership index is implemented.

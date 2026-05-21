@@ -1,4 +1,5 @@
 import Button from "../ui/Button";
+import AppIcon from "../ui/AppIcon";
 
 export default function DocumentToolbar({ onCommand, onSave, onPublish, status }) {
   const commands = [
@@ -16,12 +17,12 @@ export default function DocumentToolbar({ onCommand, onSave, onPublish, status }
 
   return (
     <div className="docs-toolbar">
-      <Button variant="primary" onClick={onSave}>Guardar</Button>
+      <Button variant="primary" onClick={onSave}><AppIcon name="save" size={18} />Guardar</Button>
       {commands.map(([command, label, value]) => (
         <Button key={`${command}-${label}`} onClick={() => onCommand(command, value)}>{label}</Button>
       ))}
       <Button onClick={() => onCommand("insertHorizontalRule")}>HR</Button>
-      <Button onClick={onPublish}>Publicar</Button>
+      <Button onClick={onPublish}><AppIcon name="forum" size={18} />Publicar</Button>
       <span style={{ marginLeft: "auto", color: "var(--roa-muted)" }}>{status}</span>
     </div>
   );

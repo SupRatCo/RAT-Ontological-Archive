@@ -5,6 +5,7 @@ import EmptyState from "../components/ui/EmptyState";
 import MediaGrid from "../components/gallery/MediaGrid";
 import MediaUploadModal from "../components/gallery/MediaUploadModal";
 import MediaViewer from "../components/gallery/MediaViewer";
+import AppIcon from "../components/ui/AppIcon";
 
 export default function GalleryPage({ project, toast }) {
   const [media, setMedia] = useState([]);
@@ -32,9 +33,9 @@ export default function GalleryPage({ project, toast }) {
 
   return (
     <section className="roa-panel">
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+      <div className="list-header">
         <h2 className="roa-panel-title">Galeria</h2>
-        <Button variant="primary" onClick={() => setUploadOpen(true)}>+ Subir</Button>
+        <Button variant="primary" onClick={() => setUploadOpen(true)}><AppIcon name="upload" />Subir</Button>
       </div>
       {media.length ? (
         <MediaGrid media={media} onOpen={setViewer} />

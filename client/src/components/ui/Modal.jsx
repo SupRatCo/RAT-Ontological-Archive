@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import Button from "./Button";
+import AppIcon from "./AppIcon";
 
 export default function Modal({ title, children, onClose }) {
   useEffect(() => {
@@ -15,7 +16,7 @@ export default function Modal({ title, children, onClose }) {
       <section className="roa-modal" role="dialog" aria-modal="true" aria-label={title}>
         <header className="roa-modal-header">
           <h2>{title}</h2>
-          <Button onClick={onClose}>X</Button>
+          <Button onClick={onClose} aria-label="Cerrar"><AppIcon name="close" size={24} /></Button>
         </header>
         {children}
       </section>

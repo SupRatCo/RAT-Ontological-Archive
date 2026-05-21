@@ -3,6 +3,16 @@
   gap: 16px;
 }
 
+.data-file-hero,
+.data-section-header,
+.data-field-form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .data-sections {
   display: flex;
   gap: 10px;
@@ -17,4 +27,30 @@
 .data-field {
   display: grid;
   gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(156, 199, 232, 0.45);
+  border-radius: var(--roa-radius-sm);
+  background: rgba(2, 18, 31, 0.34);
+}
+
+.data-field span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--roa-accent);
+  font-weight: 900;
+}
+
+.data-section-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.data-field-form {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 180px auto;
+  align-items: center;
 }

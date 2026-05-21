@@ -7,6 +7,7 @@ import EmptyState from "../ui/EmptyState";
 import ForumPostCard from "./ForumPostCard";
 import ForumComposer from "./ForumComposer";
 import useDebounce from "../../hooks/useDebounce";
+import AppIcon from "../ui/AppIcon";
 
 const tabs = [
   { value: "recent", label: "Recent" },
@@ -69,7 +70,7 @@ export default function ForumFeed({ toast }) {
       <div className="forum-toolbar">
         <Tabs tabs={tabs} value={filter} onChange={setFilter} />
         <Input placeholder="Buscar" value={q} onChange={(event) => setQ(event.target.value)} />
-        <Button variant="primary" onClick={() => setComposerOpen(true)}>+ Nuevo post</Button>
+        <Button variant="primary" onClick={() => setComposerOpen(true)}><AppIcon name="add" />Nuevo post</Button>
       </div>
       <div className="forum-feed">
         {posts.length ? posts.map((post) => <ForumPostCard key={post.id} post={post} onLike={like} onSave={save} onOpen={() => {}} onComment={() => {}} />) : (

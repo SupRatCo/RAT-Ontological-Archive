@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createDocument as createDocumentRecord, getDocuments, updateDocument } from "../services/documentService";
+import { createDocument as createDocumentRecord, deleteDocument as deleteDocumentRecord, getDocuments, updateDocument } from "../services/documentService";
 import { createPost } from "../services/forumService";
 import DocumentList from "../components/documents/DocumentList";
 import DocumentEditor from "../components/documents/DocumentEditor";
@@ -36,6 +36,14 @@ export default function DocumentPage({ project, toast }) {
     toast("Documento guardado.");
   }
 
+  async function deleteDocument(document) {
+    if (!window.confirm(`Eliminar documento "${document.title}"?`)) return;
+    await deleteDocumentRecord(project.id, document.id);
+    setDocuments((current) => current.filter((item) => item.id !== document.id));
+    if (active?.id === document.id) setActive(null);
+    toast("Documento eliminado.");
+  }
+
   async function publish(payload) {
     const data = await createPost({ ...payload, sourceProjectId: project.id });
     setPublishContent(null);
@@ -47,9 +55,9 @@ export default function DocumentPage({ project, toast }) {
   return (
     <>
       {active ? (
-        <DocumentEditor document={active} onSave={saveDocument} onPublish={setPublishContent} />
+        <DocumentEditor document={active} onBack={() => setActive(null)} onSave={saveDocument} onDelete={() => deleteDocument(active)} onPublish={setPublishContent} />
       ) : (
-        <DocumentList documents={documents} onOpen={setActive} onCreate={createDocument} />
+        <DocumentList documents={documents} onOpen={setActive} onCreate={createDocument} onDelete={deleteDocument} />
       )}
       {publishContent !== null && <PublishDocumentModal document={active} content={publishContent} onClose={() => setPublishContent(null)} onPublish={publish} />}
     </>

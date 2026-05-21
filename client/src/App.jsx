@@ -104,6 +104,15 @@ export default function App() {
     };
   }, [toast]);
 
+  useEffect(() => {
+    const themeColor = settings.themeColor || settings.theme_color || "gold";
+    const visualMode = settings.visualMode || settings.visual_mode || "dark";
+    const reducedMotion = Boolean(settings.reducedMotion ?? settings.reduced_motion ?? true);
+    document.documentElement.dataset.themeColor = themeColor;
+    document.documentElement.dataset.visualMode = visualMode;
+    document.documentElement.dataset.reducedMotion = String(reducedMotion);
+  }, [settings]);
+
   const authValue = useMemo(() => ({
     user,
     async login(payload) {
