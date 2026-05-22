@@ -89,13 +89,10 @@ export default function ForumFeed({ toast }) {
 
   return (
     <section className="roa-panel">
-      <div className="forum-topline">
-        <header className="forum-header">
-          <h1 className="forum-title">{section === "projects" ? "PROJECTS" : "COMMUNITY"}</h1>
-          <p>Comparte ideas, proyectos y descubre contenido de otros escritores</p>
-        </header>
-        <Button variant="primary" onClick={() => setComposerOpen(true)}><AppIcon name="add" />{section === "projects" ? "Publicar proyecto" : "Nuevo Post"}</Button>
-      </div>
+      <header className="forum-header">
+        <div className="forum-kicker">ROA FORUM</div>
+        <h1 className="forum-title">{section === "projects" ? "PROJECTS" : "COMMUNITY"}</h1>
+      </header>
       <div className="forum-section-tabs">
         <Button variant={section === "community" ? "primary" : "secondary"} onClick={() => { setSection("community"); setFilter("recent"); }}>Comunidad</Button>
         <Button variant={section === "projects" ? "primary" : "secondary"} onClick={() => { setSection("projects"); setFilter("recent"); }}>Proyectos</Button>

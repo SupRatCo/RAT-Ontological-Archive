@@ -10,14 +10,13 @@
 }
 
 .roa-btn {
-  min-height: 52px;
+  min-height: 36px;
   border: 1px solid var(--roa-border);
-  border-radius: 14px;
-  padding: 0 20px;
+  border-radius: 999px;
+  padding: 0 16px;
   background: var(--roa-panel-2);
   color: var(--roa-text);
-  font-weight: 900;
-  font-size: 18px;
+  font-weight: 800;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -26,8 +25,7 @@
 
 .roa-btn.primary {
   background: var(--roa-accent);
-  color: #000910;
-  border-color: var(--roa-accent);
+  color: #061828;
 }
 
 .roa-btn.danger {
@@ -37,10 +35,10 @@
 }
 
 .roa-icon-btn {
-  width: 48px;
-  height: 48px;
-  border: 1px solid rgba(0, 0, 0, 0.24);
-  border-radius: 14px;
+  width: 42px;
+  height: 42px;
+  border: 3px solid #061828;
+  border-radius: 50%;
   display: grid;
   place-items: center;
   background: transparent;
@@ -87,20 +85,18 @@
 
 .roa-panel,
 .roa-card {
-  background: #062b45;
-  border: 2px solid rgba(105, 157, 190, 0.74);
+  background: color-mix(in srgb, var(--roa-panel) 94%, transparent);
+  border: 1px solid var(--roa-border);
   border-radius: var(--roa-radius);
-  box-shadow: none;
+  box-shadow: var(--roa-shadow);
 }
 
 .roa-panel {
-  padding: 0;
-  background: transparent;
-  border: 0;
+  padding: 22px;
 }
 
 .roa-card {
-  padding: 30px;
+  padding: 18px;
   transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
 
@@ -112,35 +108,29 @@
 
 .roa-panel-title {
   margin: 0 0 16px;
-  color: var(--roa-text);
+  color: var(--roa-accent);
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  font-size: clamp(40px, 4vw, 48px);
-  line-height: 1;
 }
 
 .roa-tabs {
   display: flex;
-  gap: 30px;
+  gap: 12px;
   flex-wrap: wrap;
-  border-bottom: 1px solid rgba(105, 157, 190, 0.42);
 }
 
 .roa-tab {
-  border: 0;
-  border-bottom: 3px solid transparent;
-  color: #9ac4ed;
-  background: transparent;
+  border: 1px solid var(--roa-border);
+  color: #bcd8ff;
+  background: rgba(6, 36, 58, 0.86);
   border-radius: 0;
-  padding: 14px 20px 12px;
+  padding: 8px 24px;
   font-weight: 900;
-  font-size: 20px;
 }
 
 .roa-tab.active {
-  color: var(--roa-accent);
-  background: transparent;
-  border-bottom-color: var(--roa-accent);
+  color: #061828;
+  background: var(--roa-accent);
 }
 
 .roa-empty {
@@ -234,24 +224,24 @@
 
 .project-module-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(260px, 1fr));
-  gap: 30px;
-  margin-top: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
 }
 
 .project-hero {
   display: flex;
   align-items: flex-start;
-  gap: 30px;
-  margin-bottom: 44px;
+  gap: 18px;
+  margin-bottom: 18px;
 }
 
 .project-cover {
-  width: 160px;
-  height: 160px;
+  width: 116px;
+  height: 116px;
   border: 2px solid var(--roa-border);
   border-radius: var(--roa-radius);
-  background: rgba(255, 216, 0, 0.12);
+  background: linear-gradient(135deg, rgba(255, 216, 0, 0.22), rgba(156, 199, 232, 0.16));
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -270,39 +260,9 @@
 
 .project-module-card {
   display: grid;
-  gap: 22px;
+  gap: 8px;
   border-width: 2px;
-  min-height: 280px;
-  align-content: space-between;
-}
-
-.project-content-title {
-  margin: 0;
-  color: var(--roa-accent);
-  font-size: 30px;
-  text-transform: uppercase;
-}
-
-.project-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
-}
-
-.project-card-top strong {
-  color: var(--roa-accent);
-  font-size: 38px;
-  line-height: 1;
-}
-
-.project-card-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 14px;
-  background: rgba(255, 216, 0, 0.12);
-  display: grid;
-  place-items: center;
+  min-height: 186px;
 }
 
 .project-module-card h3,
@@ -311,16 +271,13 @@
 }
 
 .project-module-card h3 {
-  color: var(--roa-text);
-  text-transform: none;
-  font-size: 23px;
+  color: var(--roa-accent);
+  text-transform: uppercase;
 }
 
 .project-summary {
-  max-width: 790px;
+  max-width: 760px;
   color: var(--roa-muted);
-  font-size: 22px;
-  line-height: 1.42;
 }
 
 .compact-grid {
