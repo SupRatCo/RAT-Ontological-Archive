@@ -7,6 +7,7 @@ export default function Sidebar({ projects, activeProjectId, onForum, onProject,
         <AppIcon name="forum" size={28} />
         <span>FORUM</span>
       </button>
+      <h2 className="roa-sidebar-title">PROYECTOS</h2>
       <div className="roa-project-rail">
         {projects.map((project) => (
           <button
@@ -23,6 +24,7 @@ export default function Sidebar({ projects, activeProjectId, onForum, onProject,
       </div>
       <button className="roa-sidebar-add" type="button" onClick={onCreateProject} aria-label="Crear proyecto">
         <AppIcon name="add" size={32} />
+        <span>Nuevo<br />Proyecto</span>
       </button>
     </aside>
   );

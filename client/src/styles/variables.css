@@ -14,8 +14,8 @@
   --roa-success: #4dff98;
   --roa-radius: 14px;
   --roa-radius-sm: 8px;
-  --roa-topbar-height: 68px;
-  --roa-sidebar-width: 138px;
+  --roa-topbar-height: 90px;
+  --roa-sidebar-width: 260px;
   --roa-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
   color-scheme: dark;
 }

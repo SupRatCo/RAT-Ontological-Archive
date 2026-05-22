@@ -474,3 +474,57 @@ Not fully verified:
 
 - Authenticated UI flows were not completed in this run because no test login session was provided and the in-app browser input path remains unreliable for forms.
 - Firestore writes for project publication/comment/like/save should be manually retested in a normal browser with a real account after deploying the updated rules/indexes.
+
+## Exact Screenshot Layout Pass
+
+Date: 2026-05-22
+
+Reference screenshots:
+
+- `Screenshot 2026-05-22 174340.png`
+- `Screenshot 2026-05-22 174413.png`
+- `Screenshot 2026-05-22 174423.png`
+
+Changes applied:
+
+- Topbar now follows the new reference:
+  - 90px yellow bar;
+  - square `R` logo mark;
+  - two-line RAT Ontological Archive wordmark;
+  - square settings/social buttons;
+  - centered rounded search pill;
+  - plain username plus circular avatar.
+- Sidebar now follows the new reference:
+  - 260px dark-blue rail;
+  - large rounded yellow `FORUM` button;
+  - `PROYECTOS` heading;
+  - compact rounded project tiles;
+  - bottom `Nuevo Proyecto` button.
+- Main canvas now uses the flatter dark background shown in the screenshots.
+- Forum was restyled to match the reference:
+  - large `COMMUNITY/PROJECTS` title;
+  - right-aligned new post button;
+  - section buttons;
+  - underline-style tabs;
+  - large blue post cards.
+- Project dashboard was restyled to match the reference:
+  - larger cover tile and title header;
+  - edit/publication controls;
+  - 3-column large module cards;
+  - visible count badges in the card corners.
+
+Verification:
+
+```txt
+npm run build: passed
+npm run dev: passed at http://127.0.0.1:5173/
+Browser smoke test: login rendered
+CSS variables verified: --roa-topbar-height=90px, --roa-sidebar-width=260px
+Broken icon images: none observed
+Critical console errors: none observed
+Legacy backend strings visible in UI: none observed
+```
+
+Remaining manual check:
+
+- Authenticated screens should be visually checked in a normal browser session with an existing account, because the automated browser only reached the login screen in this run.

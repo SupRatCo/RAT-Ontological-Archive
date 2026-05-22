@@ -15,7 +15,11 @@ export default function Topbar({ user, onForum, onSettings, onSocial, onProfile,
   return (
     <header className="roa-topbar">
       <button className="roa-logo" onClick={onForum} type="button">
-        RAT<br />Ontological<br />Archive
+        <span className="roa-logo-mark">R</span>
+        <span className="roa-logo-text">
+          <strong>RAT ONTOLOGICAL</strong>
+          <span>ARCHIVE</span>
+        </span>
       </button>
       <div className="roa-top-actions">
         <IconButton label="Configuracion" onClick={onSettings}><AppIcon name="settings" size={25} /></IconButton>
